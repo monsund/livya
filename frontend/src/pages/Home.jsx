@@ -6,7 +6,7 @@ import ScenesCard from '../components/ScenesCard';
 import ErrorAlert from '../components/ErrorAlert';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-const API_URL = 'http://localhost:3000';
+const API_URL = 'https://livya.onrender.com';
 
 export default function Home() {
   const [loading, setLoading] = useState(false);
@@ -36,23 +36,39 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/vision`, {
-        method: 'POST',
-        body: formData
-      });
+        let url = '';
+        let options = {};
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to process vision');
-      }
+        url = `${API_URL}/vision`;
+        if (activeTab === 0) {
+          options = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vision }),
+          };
+        } else {
+          options = {
+            method: 'POST',
+            body: formData,
+          };
+        }
 
-      const data = await response.json();
-      setResults(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  const response = await fetch(url, options);
+  const text = await response.text();
+
+  if (!response.ok) {
+    throw new Error(text);
+  }
+
+  const data = JSON.parse(text);
+  setResults(data);
+
+} catch (err) {
+  setError(err.message);
+} finally {
+  setLoading(false);
+}
+
   };
 
   return (
