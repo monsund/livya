@@ -1,6 +1,6 @@
 import { extractVisionElements } from "../extractElements.js";
 import { generateScenes } from "../generateScenes.js";
-// import { generateImagesForScenes } from "../generateImagesForScenes.js";
+import { generateImagesForScenes } from "../generateImagesFromScenes.js";
 
 export const processVision = async (req, res) => {
   try {
@@ -22,12 +22,12 @@ export const processVision = async (req, res) => {
 
     const elements = await extractVisionElements(vision || "", imageBase64);
     const scenes = await generateScenes(elements);
-    // const images = await generateImagesForScenes(scenes);
+    const images = await generateImagesForScenes(scenes);
 
     res.json({
       elements,
       scenes,
-    //   images
+      images
     });
   } catch (error) {
     console.error(error);

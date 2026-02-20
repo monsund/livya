@@ -7,7 +7,7 @@ import {
   Videocam
 } from '@mui/icons-material';
 
-export default function ScenesCard({ scenes }) {
+export default function ScenesCard({ scenes, images }) {
   const getDetailIcon = (label) => {
     const icons = {
       Visual: <Visibility sx={{ fontSize: 16 }} />,
@@ -35,7 +35,16 @@ export default function ScenesCard({ scenes }) {
       </Typography>
 
       <Grid container spacing={{ xs: 1.5, md: 2 }}>
-        {scenes.map((scene) => (
+        {scenes.map((scene) => {
+          let imagePath = null;
+          if (images && Array.isArray(images)) {
+            const found = images.find(img => img.scene_id === scene.scene_id);
+            if (found && found.image_path) {
+              // For local dev, serve from backend static if needed
+              imagePath = found.image_path.startsWith('images/') ? `/${found.image_path}` : found.image_path;
+            }
+          }
+          return (
           <Grid item xs={12} sm={6} lg={4} key={scene.scene_id}>
             <Card
               elevation={2}
@@ -51,6 +60,15 @@ export default function ScenesCard({ scenes }) {
               }}
             >
               <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+                {imagePath && (
+                  <Box sx={{ mb: 2, textAlign: 'center' }}>
+                    <img
+                      src={imagePath}
+                      alt={`Scene ${scene.scene_id}`}
+                      style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                    />
+                  </Box>
+                )}
                 <Typography 
                   variant="subtitle1" 
                   color="primary" 
@@ -113,7 +131,8 @@ export default function ScenesCard({ scenes }) {
               </CardContent>
             </Card>
           </Grid>
-        ))}
+          );
+        })}
       </Grid>
     </Paper>
   );

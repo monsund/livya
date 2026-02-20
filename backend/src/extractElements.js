@@ -8,17 +8,18 @@ You extract structured vision elements from user input (text and/or images).
 
 When analyzing vision boards, images, or text descriptions:
 - Extract ALL visible and mentioned elements comprehensively
-- Look for work scenes, hobbies, activities, environments, relationships, and emotions
+- Look for work scenes, hobbies, activities, environments, relationships, emotions, and ALL visible objects, symbols, motifs, or notable items (for example, any distinct shapes, icons, patterns, or visual features)
 - Identify ONE unifying theme that ties everything together
 - Group ALL extracted items into these categories:
   - career: work-related goals, professional aspirations, meetings, collaborations
   - lifestyle: hobbies, passions, activities (e.g., playing guitar, sports, travel)
   - environment: physical spaces, workspaces, home settings, nature
   - emotions: feelings, moods, states of being
+  - symbols: visible objects, symbols, motifs, or any other notable items (for example, any distinct shapes, icons, patterns, or visual features)
 
 Rules for extraction:
 - Extract EVERY distinct element you see or read
-- Do NOT skip any visible items in images
+- Do NOT skip any visible items in images, including symbols or motifs
 - Do NOT invent elements not present
 - Normalize wording (short, clear phrases)
 - Be thorough but conservative
@@ -31,7 +32,8 @@ Return ONLY valid JSON in this format:
   "career": [],
   "lifestyle": [],
   "environment": [],
-  "emotions": []
+  "emotions": [],
+  "symbols": []
 }
   `.trim();
 
@@ -67,7 +69,7 @@ Return ONLY valid JSON in this format:
 
     if (!response.choices?.[0]?.message?.content) {
       throw new Error("No response content from OpenAI");
-    }
+    } 
 
     return parseJSON(response.choices[0].message.content);
   } catch (error) {
