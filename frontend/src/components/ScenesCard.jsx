@@ -1,4 +1,6 @@
-import { Paper, Typography, Box, Card, CardContent, Grid } from '@mui/material';
+import { Paper, Typography, Box, Card, CardContent, Grid, TextField, Select, MenuItem, Button, CircularProgress } from '@mui/material';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import {
   Visibility,
   Landscape,
@@ -7,7 +9,7 @@ import {
   Videocam
 } from '@mui/icons-material';
 
-export default function ScenesCard({ scenes, images }) {
+export default function ScenesCard({ scenes, setScenes, images, elements, originalScenes = [], onRegenerateImage, regeneratingIds = [] }) {
   const getDetailIcon = (label) => {
     const icons = {
       Visual: <Visibility sx={{ fontSize: 16 }} />,
@@ -44,6 +46,9 @@ export default function ScenesCard({ scenes, images }) {
               imagePath = found.image_path.startsWith('images/') ? `/${found.image_path}` : found.image_path;
             }
           }
+          const original = originalScenes.find(s => s.scene_id === scene.scene_id);
+          const isDirty = original && JSON.stringify(original) !== JSON.stringify(scene);
+          const isRegenerating = regeneratingIds.includes(scene.scene_id);
           return (
           <Grid item xs={12} sm={6} lg={4} key={scene.scene_id}>
             <Card
@@ -60,15 +65,6 @@ export default function ScenesCard({ scenes, images }) {
               }}
             >
               <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
-                {imagePath && (
-                  <Box sx={{ mb: 2, textAlign: 'center' }}>
-                    <img
-                      src={imagePath}
-                      alt={`Scene ${scene.scene_id}`}
-                      style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
-                    />
-                  </Box>
-                )}
                 <Typography 
                   variant="subtitle1" 
                   color="primary" 
@@ -83,10 +79,10 @@ export default function ScenesCard({ scenes, images }) {
                 </Typography>
 
                 {[
-                  { label: 'Visual', value: scene.visual },
-                  { label: 'Environment', value: scene.environment },
-                  { label: 'Actions', value: scene.actions },
-                  { label: 'Mood', value: scene.mood },
+                  { label: 'Visual', value: scene.visual, field: 'visual' },
+                  { label: 'Environment', value: scene.environment, field: 'environment', select: true, selectKey: 'environment' },
+                  { label: 'Actions', value: scene.actions, field: 'actions' },
+                  { label: 'Mood', value: scene.mood, field: 'mood', select: true, selectKey: 'emotions' },
                   { label: 'Camera', value: scene.camera }
                 ].map((detail, idx) => (
                   <Box
@@ -115,19 +111,95 @@ export default function ScenesCard({ scenes, images }) {
                         {detail.label}:
                       </Typography>
                     </Box>
-                    <Typography 
-                      variant="caption" 
-                      color="text.secondary" 
-                      sx={{ 
-                        flex: 1,
-                        fontSize: '0.7rem',
-                        lineHeight: 1.4
-                      }}
-                    >
-                      {detail.value}
-                    </Typography>
+                    {detail.field && detail.select ? (
+                      <Select
+                        value={detail.value || ''}
+                        onChange={e => {
+                          if (!setScenes) return;
+                          setScenes(scenes.map(s =>
+                            s.scene_id === scene.scene_id
+                              ? { ...s, [detail.field]: e.target.value }
+                              : s
+                          ));
+                        }}
+                        variant="standard"
+                        size="small"
+                        sx={{ flex: 1, fontSize: '0.7rem' }}
+                      >
+                        {(elements?.[detail.selectKey] || []).map((opt, i) => (
+                          <MenuItem key={i} value={opt} sx={{ fontSize: '0.7rem' }}>{opt}</MenuItem>
+                        ))}
+                        {detail.value && !(elements?.[detail.selectKey] || []).includes(detail.value) && (
+                          <MenuItem value={detail.value} sx={{ fontSize: '0.7rem' }}>{detail.value}</MenuItem>
+                        )}
+                      </Select>
+                    ) : detail.field ? (
+                      <TextField
+                        value={detail.value || ''}
+                        onChange={e => {
+                          if (!setScenes) return;
+                          setScenes(scenes.map(s =>
+                            s.scene_id === scene.scene_id
+                              ? { ...s, [detail.field]: e.target.value }
+                              : s
+                          ));
+                        }}
+                        variant="standard"
+                        size="small"
+                        multiline
+                        sx={{ flex: 1 }}
+                        inputProps={{ style: { fontSize: '0.7rem', lineHeight: 1.4 } }}
+                      />
+                    ) : (
+                      <Typography 
+                        variant="caption" 
+                        color="text.secondary" 
+                        sx={{ 
+                          flex: 1,
+                          fontSize: '0.7rem',
+                          lineHeight: 1.4
+                        }}
+                      >
+                        {detail.value}
+                      </Typography>
+                    )}
                   </Box>
                 ))}
+
+                {imagePath && (
+                  <Box sx={{ mb: 1, textAlign: 'center' }}>
+                    <img
+                      src={imagePath}
+                      alt={`Scene ${scene.scene_id}`}
+                      style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                    />
+                  </Box>
+                )}
+                <Box sx={{ textAlign: 'center', mt: 1, display: 'flex', gap: 1, justifyContent: 'center' }}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={isRegenerating ? <CircularProgress size={14} color="inherit" /> : <AutorenewIcon fontSize="small" />}
+                    onClick={() => onRegenerateImage && onRegenerateImage(scene)}
+                    disabled={!isDirty || isRegenerating}
+                    sx={{ fontSize: '0.7rem' }}
+                  >
+                    {isRegenerating ? 'Regenerating...' : 'Regenerate Image'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<RestartAltIcon fontSize="small" />}
+                    onClick={() => {
+                      if (!original || !setScenes) return;
+                      setScenes(scenes.map(s => s.scene_id === scene.scene_id ? { ...original } : s));
+                    }}
+                    disabled={!isDirty}
+                    sx={{ fontSize: '0.7rem' }}
+                  >
+                    Reset
+                  </Button>
+                </Box>
               </CardContent>
             </Card>
           </Grid>
