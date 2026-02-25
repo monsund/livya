@@ -7,7 +7,7 @@ import ScenesCard from '../components/ScenesCard';
 import ErrorAlert from '../components/ErrorAlert';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'https://livya.onrender.com';
 
 
 export default function Home() {
