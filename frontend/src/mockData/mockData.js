@@ -168,5 +168,27 @@ export const mockData = {
             "image_path": "https://dibragede1-s3-demo-bucket.s3.eu-north-1.amazonaws.com/scenes/scene-9-1771529210493.png",
             "prompt_used": "A family enjoying a day in the park, with a dog playing nearby and flowers blooming around them..\nEnvironment: Nature scenes.\nAction: The family shares joyful moments, capturing love and togetherness..\nMood: Love.\nCamera: wide shot.\nHigh quality, realistic, cinematic lighting."
         }
+    ],
+    "videos": [
+        {
+            "scene_id": 1,
+            "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+        },
+        {
+            "scene_id": 3,
+            "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
+        },
+        {
+            "scene_id": 4,
+            "videoUrl": "https://dibragede1-s3-demo-bucket.s3.eu-north-1.amazonaws.com/videos/scene-4-1772287496416.mp4"
+        },
+        {
+            "scene_id": 5,
+            "videoUrl": "https://dibragede1-s3-demo-bucket.s3.eu-north-1.amazonaws.com/videos/scene-5-1772286899265.mp4"
+        },
+        {
+            "scene_id": 6,
+            "videoUrl": "https://dibragede1-s3-demo-bucket.s3.eu-north-1.amazonaws.com/videos/scene-6-28-02-2026-07-37PM.mp4"
+        }
     ]
 }

@@ -1,6 +1,13 @@
 import express from "express";
 import multer from "multer";
-import { processVision, regenerateImage, regenerateScenes } from "../controllers/visionController.js";
+import { 
+  processVision, 
+  regenerateImage, 
+  regenerateScenes, 
+  generateVideo, 
+  getVideoStatus, 
+  stitchVideos 
+} from "../controllers/visionController.js";
 
 const router = express.Router();
 
@@ -23,5 +30,8 @@ const upload = multer({
 router.post("/vision", upload.single('image'), processVision);
 router.post("/regenerate-image", regenerateImage);
 router.post("/regenerate-scenes", regenerateScenes);
+router.post("/generate-video", generateVideo);
+router.get("/video-status/:taskId", getVideoStatus);
+router.post("/stitch-videos", stitchVideos);
 
 export default router;

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Container, Typography, Box } from '@mui/material';
+import { Container, Typography, Box, Button, CircularProgress } from '@mui/material';
+import MovieFilterIcon from '@mui/icons-material/MovieFilter';
 import { mockData } from '../mockData/mockData';
 import InputSection from '../components/InputSection';
 import ElementsCard from '../components/ElementsCard';
@@ -18,13 +19,83 @@ export default function Home() {
   );
   const [error, setError] = useState(null);
   const [theme, setTheme] = useState(results?.elements?.theme || '');
-  const [elements, setElements] = useState(results?.elements || {});
+  // Seed videoState from mockData.videos if present
+  const initVideoState = () => {
+    if (!mockData?.videos) return {};
+    return Object.fromEntries(
+      mockData.videos.map(v => [v.scene_id, { status: 'SUCCEEDED', videoUrl: v.videoUrl, error: null }])
+    );
+  };  const [elements, setElements] = useState(results?.elements || {});
   const [originalElements, setOriginalElements] = useState(results?.elements || {});
   const [originalTheme, setOriginalTheme] = useState(results?.elements?.theme || '');
   const [scenes, setScenes] = useState(results?.scenes || []);
   const [originalScenes, setOriginalScenes] = useState(results?.scenes || []);
   const [regeneratingIds, setRegeneratingIds] = useState([]);
   const [regeneratingScenes, setRegeneratingScenes] = useState(false);
+  // video state: { [scene_id]: { taskId, status, videoUrl, error } }
+  const [videoState, setVideoState] = useState(initVideoState);
+  const [stitchState, setStitchState] = useState({ loading: false, videoUrl: null, error: null });
+
+  const handleStitchVideos = async () => {
+    // Collect all scenes that have a completed video, sorted by scene_id
+    const videos = Object.entries(videoState)
+      .filter(([, v]) => v.status === 'SUCCEEDED' && v.videoUrl)
+      .map(([sceneId, v]) => ({ scene_id: Number(sceneId), videoUrl: v.videoUrl }))
+      .sort((a, b) => a.scene_id - b.scene_id);
+    if (videos.length < 2) {
+      setStitchState({ loading: false, videoUrl: null, error: 'Need at least 2 generated videos to stitch' });
+      return;
+    }
+    setStitchState({ loading: true, videoUrl: null, error: null });
+    try {
+      const res = await fetch(`${API_URL}/stitch-videos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videos }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setStitchState({ loading: false, videoUrl: data.stitchedUrl, error: null });
+    } catch (err) {
+      setStitchState({ loading: false, videoUrl: null, error: err.message });
+    }
+  };
+
+  const updateVideoState = (sceneId, patch) =>
+    setVideoState(prev => ({ ...prev, [sceneId]: { ...(prev[sceneId] || {}), ...patch } }));
+
+  const handleGenerateVideo = async (scene, imagePath) => {
+    const sceneId = scene.scene_id;
+    updateVideoState(sceneId, { status: 'STARTING', videoUrl: null, error: null });
+    try {
+      const res = await fetch(`${API_URL}/generate-video`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: imagePath, scene }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      // If no taskId returned (e.g. backend is in prompt-testing mode), just clear the loading state
+      if (!data.taskId) {
+        updateVideoState(sceneId, { status: null });
+        return;
+      }
+      const { taskId } = data;
+      updateVideoState(sceneId, { taskId, status: 'PENDING' });
+      // Poll until done
+      const poll = async () => {
+        const statusRes = await fetch(`${API_URL}/video-status/${taskId}?sceneId=${sceneId}`);
+        const { status, videoUrl, error: taskError } = await statusRes.json();
+        updateVideoState(sceneId, { status, videoUrl: videoUrl || null, error: taskError || null });
+        if (status !== 'SUCCEEDED' && status !== 'FAILED') {
+          setTimeout(poll, 5000);
+        }
+      };
+      setTimeout(poll, 5000);
+    } catch (err) {
+      updateVideoState(sceneId, { status: 'FAILED', error: err.message });
+    }
+  };
 
   useEffect(() => {
     setTheme(results?.elements?.theme || '');
@@ -188,7 +259,59 @@ export default function Home() {
               onRegenerateScenes={handleRegenerateScenes}
               regeneratingScenes={regeneratingScenes}
             />
-            <ScenesCard scenes={scenes} setScenes={setScenes} images={results.images} elements={elements} originalScenes={originalScenes} onRegenerateImage={handleRegenerateImage} regeneratingIds={regeneratingIds} />
+            <ScenesCard 
+              scenes={scenes} 
+              setScenes={setScenes} 
+              images={results.images} 
+              elements={elements} 
+              originalScenes={originalScenes} 
+              onRegenerateImage={handleRegenerateImage} 
+              regeneratingIds={regeneratingIds} 
+              videoState={videoState} 
+              onGenerateVideo={handleGenerateVideo} />
+            {/* Stitch all scene videos into one */}
+            <Box sx={{ mt: 3, textAlign: 'center' }}>
+              <Button
+                variant="contained"
+                color="primary"
+                size="large"
+                startIcon={stitchState.loading ? <CircularProgress size={18} color="inherit" /> : <MovieFilterIcon />}
+                onClick={handleStitchVideos}
+                disabled={stitchState.loading}
+              >
+                {stitchState.loading ? 'Stitching Videos...' : '🎬 Create Vision Board Video'}
+              </Button>
+              {stitchState.error && (
+                <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+                  {stitchState.error}
+                </Typography>
+              )}
+              {stitchState.videoUrl && (
+                <Box sx={{ mt: 2, mx: 'auto', maxWidth: 720 }}>
+                  <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                    ✅ Your Vision Board Video
+                  </Typography>
+                  <video
+                    key={stitchState.videoUrl}
+                    src={stitchState.videoUrl}
+                    controls
+                    autoPlay
+                    style={{ width: '100%', borderRadius: 12, boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}
+                  />
+                  <Button
+                    component="a"
+                    href={stitchState.videoUrl}
+                    download="vision-board.mp4"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="outlined"
+                    sx={{ mt: 1 }}
+                  >
+                    Download Vision Board Video
+                  </Button>
+                </Box>
+              )}
+            </Box>
           </Box>
         )}
       </Container>

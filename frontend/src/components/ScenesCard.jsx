@@ -1,6 +1,8 @@
 import { Paper, Typography, Box, Card, CardContent, Grid, TextField, Select, MenuItem, Button, CircularProgress } from '@mui/material';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import MovieIcon from '@mui/icons-material/Movie';
+import DownloadIcon from '@mui/icons-material/Download';
 import {
   Visibility,
   Landscape,
@@ -9,7 +11,17 @@ import {
   Videocam
 } from '@mui/icons-material';
 
-export default function ScenesCard({ scenes, setScenes, images, elements, originalScenes = [], onRegenerateImage, regeneratingIds = [] }) {
+export default function ScenesCard({ 
+    scenes, 
+    setScenes, 
+    images, 
+    elements, 
+    originalScenes = [], 
+    onRegenerateImage, 
+    regeneratingIds = [], 
+    videoState = {}, 
+    onGenerateVideo 
+  }) {
   const getDetailIcon = (label) => {
     const icons = {
       Visual: <Visibility sx={{ fontSize: 16 }} />,
@@ -49,6 +61,8 @@ export default function ScenesCard({ scenes, setScenes, images, elements, origin
           const original = originalScenes.find(s => s.scene_id === scene.scene_id);
           const isDirty = original && JSON.stringify(original) !== JSON.stringify(scene);
           const isRegenerating = regeneratingIds.includes(scene.scene_id);
+          const video = videoState[scene.scene_id] || {};
+          const isGeneratingVideo = video.status === 'STARTING' || video.status === 'PENDING' || video.status === 'RUNNING';
           return (
           <Grid item xs={12} sm={6} lg={4} key={scene.scene_id}>
             <Card
@@ -199,6 +213,50 @@ export default function ScenesCard({ scenes, setScenes, images, elements, origin
                   >
                     Reset
                   </Button>
+                </Box>
+                <Box sx={{ textAlign: 'center', mt: 1 }}>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    size="small"
+                    startIcon={isGeneratingVideo ? <CircularProgress size={14} color="inherit" /> : <MovieIcon fontSize="small" />}
+                    onClick={() => onGenerateVideo && onGenerateVideo(scene, imagePath)}
+                    disabled={isGeneratingVideo || !imagePath}
+                    sx={{ fontSize: '0.7rem', width: '100%' }}
+                  >
+                    {isGeneratingVideo ? `Generating Video... (${video.status})` : video.videoUrl ? 'Regenerate Video' : 'Generate Video'}
+                  </Button>
+                  {video.status === 'FAILED' && (
+                    <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
+                      {video.error || 'Video generation failed'}
+                    </Typography>
+                  )}
+                  {video.videoUrl && (
+                    <Box sx={{ mt: 1.5, borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+                      <video
+                        key={video.videoUrl}
+                        src={video.videoUrl}
+                        controls
+                        autoPlay
+                        loop
+                        style={{ width: '100%', display: 'block', maxHeight: 220 }}
+                      />
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1, py: 0.5, bgcolor: 'background.paper' }}>
+                        <Button
+                          size="small"
+                          startIcon={<DownloadIcon fontSize="small" />}
+                          component="a"
+                          href={video.videoUrl}
+                          download={`scene-${scene.scene_id}-video.mp4`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{ fontSize: '0.7rem' }}
+                        >
+                          Download
+                        </Button>
+                      </Box>
+                    </Box>
+                  )}
                 </Box>
               </CardContent>
             </Card>
