@@ -20,7 +20,8 @@ export default function ScenesCard({
     onRegenerateImage, 
     regeneratingIds = [], 
     videoState = {}, 
-    onGenerateVideo 
+    onGenerateVideo,
+    totalScenes = null
   }) {
   const getDetailIcon = (label) => {
     const icons = {
@@ -45,7 +46,7 @@ export default function ScenesCard({
           mb: 2
         }}
       >
-        🎬 Generated Scenes
+        🎬 Generated Scenes{totalScenes ? ` (${scenes.length} of ${totalScenes})` : ''}
       </Typography>
 
       <Grid container spacing={{ xs: 1.5, md: 2 }}>

@@ -1,7 +1,8 @@
 import express from "express";
 import multer from "multer";
 import { 
-  processVision, 
+  processVision,
+  processVisionStream,
   regenerateImage, 
   regenerateScenes, 
   generateVideo, 
@@ -28,6 +29,7 @@ const upload = multer({
 });
 
 router.post("/vision", upload.single('image'), processVision);
+router.post("/vision-stream", upload.single('image'), processVisionStream);
 router.post("/regenerate-image", regenerateImage);
 router.post("/regenerate-scenes", regenerateScenes);
 router.post("/generate-video", generateVideo);

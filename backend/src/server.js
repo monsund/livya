@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import visionRoutes from "./routes/visionRoutes.js";
+import "./queues/imageQueue.js"; // start the image-generation worker
 
 const app = express();
 const PORT = process.env.PORT || 3000;
