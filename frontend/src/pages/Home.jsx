@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Container, Typography, Box, Button, CircularProgress } from '@mui/material';
 import MovieFilterIcon from '@mui/icons-material/MovieFilter';
 import { mockData } from '../mockData/mockData';
@@ -13,28 +13,30 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://livya.onrender.com';
 
 export default function Home() {
   const [loading, setLoading] = useState(false);
-  // Initialize with mockData if not empty, else null
-  const [results, setResults] = useState(
-    mockData && Object.keys(mockData).length > 0 ? mockData : null
-  );
+  const [showResults, setShowResults] = useState(!!(mockData?.scenes?.length));
   const [error, setError] = useState(null);
-  const [theme, setTheme] = useState(results?.elements?.theme || '');
+  const [theme, setTheme] = useState(mockData?.elements?.theme || '');
   // Seed videoState from mockData.videos if present
   const initVideoState = () => {
     if (!mockData?.videos) return {};
     return Object.fromEntries(
       mockData.videos.map(v => [v.scene_id, { status: 'SUCCEEDED', videoUrl: v.videoUrl, error: null }])
     );
-  };  const [elements, setElements] = useState(results?.elements || {});
-  const [originalElements, setOriginalElements] = useState(results?.elements || {});
-  const [originalTheme, setOriginalTheme] = useState(results?.elements?.theme || '');
-  const [scenes, setScenes] = useState(results?.scenes || []);
-  const [originalScenes, setOriginalScenes] = useState(results?.scenes || []);
+  };
+  const [elements, setElements] = useState(mockData?.elements || {});
+  const [originalElements, setOriginalElements] = useState(mockData?.elements || {});
+  const [originalTheme, setOriginalTheme] = useState(mockData?.elements?.theme || '');
+  const [scenes, setScenes] = useState(mockData?.scenes || []);
+  const [originalScenes, setOriginalScenes] = useState(mockData?.scenes || []);
+  const [images, setImages] = useState(mockData?.images || []);
+  const [totalScenes, setTotalScenes] = useState(mockData?.scenes?.length || null);
   const [regeneratingIds, setRegeneratingIds] = useState([]);
   const [regeneratingScenes, setRegeneratingScenes] = useState(false);
   // video state: { [scene_id]: { taskId, status, videoUrl, error } }
   const [videoState, setVideoState] = useState(initVideoState);
   const [stitchState, setStitchState] = useState({ loading: false, videoUrl: null, error: null });
+  // voice state: { [scene_id]: { loading, audioUrl, error } }
+  const [voiceState, setVoiceState] = useState({});
 
   const handleStitchVideos = async () => {
     // Collect all scenes that have a completed video, sorted by scene_id
@@ -97,14 +99,22 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    setTheme(results?.elements?.theme || '');
-    setElements(results?.elements || {});
-    setOriginalElements(results?.elements || {});
-    setOriginalTheme(results?.elements?.theme || '');
-    setScenes(results?.scenes || []);
-    setOriginalScenes(results?.scenes || []);
-  }, [results]);
+  const handleGenerateVoiceover = async (scene) => {
+    const sceneId = scene.scene_id;
+    setVoiceState(prev => ({ ...prev, [sceneId]: { loading: true, audioUrl: null, error: null } }));
+    try {
+      const res = await fetch(`${API_URL}/generate-voiceover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scene_id: sceneId, text: scene.voiceover }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setVoiceState(prev => ({ ...prev, [sceneId]: { loading: false, audioUrl: data.audio_url, error: null } }));
+    } catch (err) {
+      setVoiceState(prev => ({ ...prev, [sceneId]: { loading: false, audioUrl: null, error: err.message } }));
+    }
+  };
 
   const handleRegenerateScenes = async () => {
     setRegeneratingScenes(true);
@@ -119,7 +129,7 @@ export default function Home() {
       if (data.scenes) {
         setScenes(data.scenes);
         setOriginalScenes(data.scenes);
-        setResults(prev => ({ ...prev, scenes: data.scenes, images: data.images }));
+        setImages(data.images || []);
         setOriginalElements({ ...elements, theme });
         setOriginalTheme(theme);
       }
@@ -140,12 +150,9 @@ export default function Home() {
       });
       const data = await response.json();
       if (data.image_path) {
-        setResults(prev => ({
-          ...prev,
-          images: (prev.images || []).map(img =>
-            img.scene_id === scene.scene_id ? { ...img, image_path: data.image_path } : img
-          )
-        }));
+        setImages(prev => prev.map(img =>
+          img.scene_id === scene.scene_id ? { ...img, image_path: data.image_path } : img
+        ));
         setOriginalScenes(prev => prev.map(s => s.scene_id === scene.scene_id ? { ...scene } : s));
       }
     } catch (err) {
@@ -156,7 +163,6 @@ export default function Home() {
   };
 
   const handleSubmit = async (formData, activeTab) => {
-    // Validation
     const vision = formData.get('vision');
     const image = formData.get('image');
 
@@ -173,57 +179,85 @@ export default function Home() {
       return;
     }
 
-
     setError(null);
-    setResults(null);
+    setShowResults(false);
+    setScenes([]);
+    setImages([]);
+    setElements({});
+    setTotalScenes(null);
+    setVideoState({});
+    setVoiceState({});
+    setStitchState({ loading: false, videoUrl: null, error: null });
     setLoading(true);
 
+    const options = activeTab === 0
+      ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vision }) }
+      : { method: 'POST', body: formData };
 
-    // --- main API logic below ---
+    let response;
+    try {
+      response = await fetch(`${API_URL}/vision-stream`, options);
+    } catch {
+        // API unreachable — fall back to mock data
+        setElements(mockData?.elements || {});
+        setOriginalElements(mockData?.elements || {});
+        setTheme(mockData?.elements?.theme || '');
+        setOriginalTheme(mockData?.elements?.theme || '');
+        setScenes(mockData?.scenes || []);
+        setOriginalScenes(mockData?.scenes || []);
+        setImages(mockData?.images || []);
+        setTotalScenes(mockData?.scenes?.length || null);
+        setShowResults(true);
+        setLoading(false);
+      return;
+    }
 
-
+    if (!response.ok) {
+      setError(`Server error: ${response.status}`);
+      setLoading(false);
+      return;
+    }
 
     try {
-      let url = '';
-      let options = {};
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
 
-      url = `${API_URL}/vision`;
-      if (activeTab === 0) {
-        options = {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ vision }),
-        };
-      } else {
-        options = {
-          method: 'POST',
-          body: formData,
-        };
-      }
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      let data = null;
-      let apiFailed = false;
-      try {
-        const response = await fetch(url, options);
-        const text = await response.text();
-        if (!response.ok || !text) {
-          apiFailed = true;
-        } else {
-          data = JSON.parse(text);
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // keep any incomplete line
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          let parsed;
+          try { parsed = JSON.parse(line.slice(6)); } catch { continue; }
+          const { type, data } = parsed;
+
+          if (type === 'elements') {
+            setElements(data);
+            setOriginalElements(data);
+            setTheme(data.theme || '');
+            setOriginalTheme(data.theme || '');
+          } else if (type === 'scenes') {
+            setScenes(data);
+            setOriginalScenes(data);
+            setTotalScenes(data.length);
+            setShowResults(true);
+            setLoading(false); // scenes are here — stop the spinner
+          } else if (type === 'image') {
+            setImages(prev => [...prev, data]); // images pop in one by one
+          } else if (type === 'error') {
+            throw new Error(data.message);
+          }
         }
-      } catch (err) {
-        apiFailed = true;
-        console.log("API call failed:", err);
-      }
-
-      if (apiFailed || !data || Object.keys(data).length === 0) {
-        setResults(mockData);
-      } else {
-        setResults(data);
       }
     } catch (err) {
+      console.error('Vision stream error:', err);
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -248,7 +282,7 @@ export default function Home() {
         </Box>
         {loading && <LoadingSpinner />}
         {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
-        {results && (
+        {showResults && (
           <Box sx={{ mt: 4 }}>
             <ElementsCard
               elements={{ ...elements, theme }}
@@ -262,13 +296,16 @@ export default function Home() {
             <ScenesCard 
               scenes={scenes} 
               setScenes={setScenes} 
-              images={results.images} 
+              images={images} 
               elements={elements} 
               originalScenes={originalScenes} 
               onRegenerateImage={handleRegenerateImage} 
               regeneratingIds={regeneratingIds} 
               videoState={videoState} 
-              onGenerateVideo={handleGenerateVideo} />
+              onGenerateVideo={handleGenerateVideo}
+              totalScenes={totalScenes}
+              voiceState={voiceState}
+              onGenerateVoiceover={handleGenerateVoiceover} />
             {/* Stitch all scene videos into one */}
             <Box sx={{ mt: 3, textAlign: 'center' }}>
               <Button
@@ -295,7 +332,6 @@ export default function Home() {
                     key={stitchState.videoUrl}
                     src={stitchState.videoUrl}
                     controls
-                    autoPlay
                     style={{ width: '100%', borderRadius: 12, boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}
                   />
                   <Button

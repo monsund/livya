@@ -43,8 +43,11 @@ Scene schema:
   "environment": string,
   "actions": string,
   "mood": string,
-  "camera": string
+  "camera": string,
+  "voiceover": string
 }
+
+voiceover: A 2-3 sentence narrator script spoken aloud during this scene. Written in present tense, evocative and personal, describing what is happening and how it feels.
 
 Camera options (pick one per scene):
 - wide shot
