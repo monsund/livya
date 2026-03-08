@@ -238,7 +238,7 @@ export default function ScenesCard({
                         key={video.videoUrl}
                         src={video.videoUrl}
                         controls
-                        autoPlay
+                        // autoPlay
                         loop
                         style={{ width: '100%', display: 'block', maxHeight: 220 }}
                       />

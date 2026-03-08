@@ -166,6 +166,8 @@ export default function Home() {
     setImages([]);
     setElements({});
     setTotalScenes(null);
+    setVideoState({});
+    setStitchState({ loading: false, videoUrl: null, error: null });
     setLoading(true);
 
     const options = activeTab === 0
@@ -176,17 +178,17 @@ export default function Home() {
     try {
       response = await fetch(`${API_URL}/vision-stream`, options);
     } catch {
-      // API unreachable — fall back to mock data
-      setElements(mockData?.elements || {});
-      setOriginalElements(mockData?.elements || {});
-      setTheme(mockData?.elements?.theme || '');
-      setOriginalTheme(mockData?.elements?.theme || '');
-      setScenes(mockData?.scenes || []);
-      setOriginalScenes(mockData?.scenes || []);
-      setImages(mockData?.images || []);
-      setTotalScenes(mockData?.scenes?.length || null);
-      setShowResults(true);
-      setLoading(false);
+        // API unreachable — fall back to mock data
+        setElements(mockData?.elements || {});
+        setOriginalElements(mockData?.elements || {});
+        setTheme(mockData?.elements?.theme || '');
+        setOriginalTheme(mockData?.elements?.theme || '');
+        setScenes(mockData?.scenes || []);
+        setOriginalScenes(mockData?.scenes || []);
+        setImages(mockData?.images || []);
+        setTotalScenes(mockData?.scenes?.length || null);
+        setShowResults(true);
+        setLoading(false);
       return;
     }
 
@@ -308,7 +310,6 @@ export default function Home() {
                     key={stitchState.videoUrl}
                     src={stitchState.videoUrl}
                     controls
-                    autoPlay
                     style={{ width: '100%', borderRadius: 12, boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}
                   />
                   <Button
