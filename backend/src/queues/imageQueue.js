@@ -1,11 +1,28 @@
 import { Queue, Worker, QueueEvents } from 'bullmq';
 import { generateImagesForScenes } from '../generateImagesFromScenes.js';
 
-const connection = process.env.REDIS_URL;
+if (!process.env.REDIS_URL) {
+  throw new Error("REDIS_URL is not defined");
+}
 
-console.log(`[ImageQueue] Connecting to Redis at ${connection}`);
+const connection = {
+  url: process.env.REDIS_URL,
+  maxRetriesPerRequest: null
+};
 
-export const imageQueue = new Queue('image-generation', { connection });
+console.log(`[ImageQueue] Connecting to Redis at ${connection.url}`);
+
+export const imageQueue = new Queue('image-generation', {
+  connection,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 2000
+    }
+  }
+});
+
 export const imageQueueEvents = new QueueEvents('image-generation', { connection });
 
 export const imageWorker = new Worker(
