@@ -8,7 +8,8 @@ import {
   Landscape,
   DirectionsRun,
   Mood,
-  Videocam
+  Videocam,
+  RecordVoiceOver
 } from '@mui/icons-material';
 
 export default function ScenesCard({ 
@@ -21,7 +22,9 @@ export default function ScenesCard({
     regeneratingIds = [], 
     videoState = {}, 
     onGenerateVideo,
-    totalScenes = null
+    totalScenes = null,
+    voiceState = {},
+    onGenerateVoiceover
   }) {
   const getDetailIcon = (label) => {
     const icons = {
@@ -64,6 +67,8 @@ export default function ScenesCard({
           const isRegenerating = regeneratingIds.includes(scene.scene_id);
           const video = videoState[scene.scene_id] || {};
           const isGeneratingVideo = video.status === 'STARTING' || video.status === 'PENDING' || video.status === 'RUNNING';
+          const voice = voiceState[scene.scene_id] || {};
+          const isGeneratingVoice = !!voice.loading;
           return (
           <Grid item xs={12} sm={6} lg={4} key={scene.scene_id}>
             <Card
@@ -190,6 +195,46 @@ export default function ScenesCard({
                     />
                   </Box>
                 )}
+
+                {/* Voiceover script */}
+                {scene.voiceover && (
+                  <Box sx={{ mt: 1.5, p: 1, bgcolor: 'grey.50', borderRadius: 1, borderLeft: 2, borderColor: 'secondary.main' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                      <RecordVoiceOver sx={{ fontSize: 14, color: 'secondary.main' }} />
+                      <Typography variant="caption" fontWeight="bold" color="secondary" sx={{ fontSize: '0.7rem' }}>
+                        Voiceover:
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', lineHeight: 1.5, fontStyle: 'italic' }}>
+                      {scene.voiceover}
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Voice generation */}
+                <Box sx={{ textAlign: 'center', mt: 1 }}>
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    size="small"
+                    startIcon={isGeneratingVoice ? <CircularProgress size={14} color="inherit" /> : <RecordVoiceOver fontSize="small" />}
+                    onClick={() => onGenerateVoiceover && onGenerateVoiceover(scene)}
+                    disabled={isGeneratingVoice || !scene.voiceover}
+                    sx={{ fontSize: '0.7rem', width: '100%' }}
+                  >
+                    {isGeneratingVoice ? 'Generating Voice...' : voice.audioUrl ? 'Regenerate Voice' : '🎙️ Generate Voice'}
+                  </Button>
+                  {voice.error && (
+                    <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
+                      {voice.error}
+                    </Typography>
+                  )}
+                  {voice.audioUrl && (
+                    <Box sx={{ mt: 1 }}>
+                      <audio key={voice.audioUrl} src={voice.audioUrl} controls style={{ width: '100%' }} />
+                    </Box>
+                  )}
+                </Box>
                 <Box sx={{ textAlign: 'center', mt: 1, display: 'flex', gap: 1, justifyContent: 'center' }}>
                   <Button
                     variant="contained"

@@ -3,6 +3,12 @@ import { generateScenes } from "../generateScenes.js";
 import { generateImagesForScenes } from "../generateImagesFromScenes.js";
 import { startVideoGeneration, getVideoTaskStatus, uploadVideoToS3, stitchVideosToS3 } from "../services/runwayService.js";
 import { imageQueue, imageQueueEvents } from "../queues/imageQueue.js";
+import { openai } from "../openai.js";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+const s3 = new S3Client({ region: process.env.AWS_REGION });
+const S3_BUCKET = process.env.S3_BUCKET_NAME;
+const S3_BASE_URL = process.env.S3_BASE_URL || `https://${S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com`;
 
 export const processVision = async (req, res) => {
   const t0 = Date.now();
@@ -252,5 +258,40 @@ export const stitchVideos = async (req, res) => {
   } catch (error) {
     console.error(`[Stitch] ❌ Error after ${Date.now() - t0}ms:`, error);
     res.status(500).json({ error: error.message || 'Failed to stitch videos' });
+  }
+};
+
+export const generateVoiceover = async (req, res) => {
+  const t0 = Date.now();
+  try {
+    const { scene_id, text } = req.body;
+    if (!scene_id || !text) {
+      console.warn('[Voiceover] Rejected: scene_id and text are required');
+      return res.status(400).json({ error: 'scene_id and text are required' });
+    }
+    console.log(`[Voiceover] Generating TTS for scene ${scene_id} (${text.length} chars)...`);
+
+    const mp3 = await openai.audio.speech.create({
+      model: 'tts-1',
+      voice: 'alloy',
+      input: text,
+    });
+
+    const buffer = Buffer.from(await mp3.arrayBuffer());
+    const key = `voiceovers/scene-${scene_id}-${Date.now()}.mp3`;
+
+    await s3.send(new PutObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: key,
+      Body: buffer,
+      ContentType: 'audio/mpeg',
+    }));
+
+    const audioUrl = `${S3_BASE_URL}/${key}`;
+    console.log(`[Voiceover] ✅ Scene ${scene_id} done in ${Date.now() - t0}ms: ${audioUrl}`);
+    res.json({ scene_id, audio_url: audioUrl });
+  } catch (error) {
+    console.error(`[Voiceover] ❌ Error after ${Date.now() - t0}ms:`, error);
+    res.status(500).json({ error: error.message || 'Failed to generate voiceover' });
   }
 };

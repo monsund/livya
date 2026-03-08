@@ -7,7 +7,8 @@ import {
   regenerateScenes, 
   generateVideo, 
   getVideoStatus, 
-  stitchVideos 
+  stitchVideos,
+  generateVoiceover
 } from "../controllers/visionController.js";
 
 const router = express.Router();
@@ -35,5 +36,6 @@ router.post("/regenerate-scenes", regenerateScenes);
 router.post("/generate-video", generateVideo);
 router.get("/video-status/:taskId", getVideoStatus);
 router.post("/stitch-videos", stitchVideos);
+router.post("/generate-voiceover", generateVoiceover);
 
 export default router;
