@@ -27,5 +27,4 @@ app.use("/", visionRoutes);
 
 app.listen(PORT, () => {
   console.log(`🚀 Livya API running on http://localhost:${PORT}`);
-  console.log(`📚 OpenAI key: ${process.env.OPENAI_API_KEY}`);
 });

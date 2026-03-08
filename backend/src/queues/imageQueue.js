@@ -1,12 +1,9 @@
 import { Queue, Worker, QueueEvents } from 'bullmq';
 import { generateImagesForScenes } from '../generateImagesFromScenes.js';
 
-const connection = {
-  host: process.env.REDIS_URL || '127.0.0.1',
-  port: Number(process.env.REDIS_PORT) || 6379,
-};
+const connection = process.env.REDIS_URL;
 
-console.log(`[ImageQueue] Connecting to Redis at ${connection.host}:${connection.port}`);
+console.log(`[ImageQueue] Connecting to Redis at ${connection}`);
 
 export const imageQueue = new Queue('image-generation', { connection });
 export const imageQueueEvents = new QueueEvents('image-generation', { connection });
