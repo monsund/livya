@@ -19,6 +19,71 @@ const S3_BUCKET = process.env.S3_BUCKET_NAME;
 const S3_BASE_URL = process.env.S3_BASE_URL || `https://${S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com`;
 
 /**
+ * Download a Runway video + receive an audio buffer,
+ * mux them together with ffmpeg (-c:v copy, -c:a aac, -shortest),
+ * upload the merged MP4 to S3 and return the permanent URL.
+ */
+export async function mergeVideoWithAudio(runwayVideoUrl, audioBuffer, sceneId) {
+  const tmpDir = os.tmpdir();
+  const ts = Date.now();
+  const videoFile  = path.join(tmpDir, `video-${sceneId}-${ts}.mp4`);
+  const audioFile  = path.join(tmpDir, `audio-${sceneId}-${ts}.mp3`);
+  const outputFile = path.join(tmpDir, `merged-${sceneId}-${ts}.mp4`);
+
+  console.log(`[Merge] Downloading Runway video for scene ${sceneId}...`);
+  const res = await fetch(runwayVideoUrl);
+  if (!res.ok) throw new Error(`Failed to download Runway video: ${res.status}`);
+  fs.writeFileSync(videoFile, Buffer.from(await res.arrayBuffer()));
+  fs.writeFileSync(audioFile, audioBuffer);
+
+  console.log(`[Merge] Muxing video + audio for scene ${sceneId}...`);
+  await new Promise((resolve, reject) => {
+    ffmpeg()
+      .input(videoFile)
+      .input(audioFile)
+      .outputOptions([
+        '-map 0:v:0',          // explicitly pick video stream from input 0
+        '-map 1:a:0',          // explicitly pick audio stream from input 1
+        '-c:v copy',           // copy video — no re-encode
+        '-c:a aac',            // encode mp3 → aac (mp4-compatible)
+        '-b:a 128k',
+        '-shortest',           // end when the shorter stream ends
+        '-movflags +faststart',
+      ])
+      .on('start', cmd => console.log('[Merge] ffmpeg cmd:', cmd))
+      .on('stderr', line => console.log('[Merge] ffmpeg:', line))
+      .on('end', () => { console.log('[Merge] ffmpeg mux complete'); resolve(); })
+      .on('error', (err) => { console.error('[Merge] ffmpeg error:', err.message); reject(err); })
+      .save(outputFile);
+  });
+
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, '0');
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const yyyy = now.getFullYear();
+  const hours = now.getHours();
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const hh = String(hours % 12 || 12).padStart(2, '0');
+  const timestamp = `${dd}-${mm}-${yyyy}-${hh}-${minutes}${ampm}`;
+  const s3Key = `videos/scene-${sceneId}-${timestamp}.mp4`;
+
+  const buffer = fs.readFileSync(outputFile);
+  await s3.send(new PutObjectCommand({
+    Bucket: S3_BUCKET,
+    Key: s3Key,
+    Body: buffer,
+    ContentType: 'video/mp4',
+  }));
+
+  [videoFile, audioFile, outputFile].forEach(f => { try { fs.unlinkSync(f); } catch (_) {} });
+
+  const s3Url = `${S3_BASE_URL}/${s3Key}`;
+  console.log(`[Merge] ✅ Scene ${sceneId} merged video uploaded: ${s3Url}`);
+  return s3Url;
+}
+
+/**
  * Download a video from a temporary URL and upload it to S3.
  * Returns the permanent S3 URL.
  */

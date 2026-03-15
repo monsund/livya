@@ -47,7 +47,8 @@ export const mockData = {
             "environment": "Office setting",
             "actions": "Team members are engaged in a discussion, sharing ideas and celebrating a recent success.",
             "mood": "Joy",
-            "camera": "wide shot"
+            "camera": "wide shot",
+            "voiceover": "The room buzzes with energy as the team comes together, united by a shared victory. Laughter and ideas flow freely, and the trophy on the table is a reminder of what they've built. This is what collaboration looks like when it becomes something real."
         },
         {
             "scene_id": 2,
@@ -56,7 +57,8 @@ export const mockData = {
             "environment": "Office setting",
             "actions": "The presenter passionately explains the project, while colleagues nod in agreement.",
             "mood": "Happiness",
-            "camera": "medium shot"
+            "camera": "medium shot",
+            "voiceover": "Standing at the front of the room, every word carries conviction and purpose. The audience leans in, drawn to a vision that's both bold and clear. This is the moment where hard work meets the world."
         },
         {
             "scene_id": 3,
@@ -65,7 +67,8 @@ export const mockData = {
             "environment": "Nature scenes",
             "actions": "The artist captures the beauty of the landscape on canvas, smiling as they work.",
             "mood": "Contentment",
-            "camera": "close-up"
+            "camera": "close-up",
+            "voiceover": "Brush strokes flow in quiet harmony with the world around them. Every color on the canvas is a conversation between the artist and the earth. In this moment, there is nothing else — only pure, unhurried creation."
         },
         {
             "scene_id": 4,
@@ -74,7 +77,8 @@ export const mockData = {
             "environment": "Nature scenes",
             "actions": "Individuals are practicing yoga poses, embodying relaxation and tranquility.",
             "mood": "Relaxation",
-            "camera": "slow pan"
+            "camera": "slow pan",
+            "voiceover": "The warmth of the sun settles over the body like a gentle embrace. Breath follows breath, each one releasing a little more tension, a little more weight. Here, the body and mind finally agree — this is rest."
         },
         {
             "scene_id": 5,
@@ -83,7 +87,8 @@ export const mockData = {
             "environment": "Cozy indoor space",
             "actions": "Family members are engaged in various self-care activities, sharing laughter and love.",
             "mood": "Love",
-            "camera": "medium shot"
+            "camera": "medium shot",
+            "voiceover": "Home is not just a place — it's the sound of familiar laughter and the warmth of people who know you. In this cozy room, love is not grand or dramatic; it's small, constant, and entirely enough. The dog at their feet agrees."
         },
         {
             "scene_id": 6,
@@ -92,7 +97,8 @@ export const mockData = {
             "environment": "Nature scenes",
             "actions": "The skateboarder performs tricks, exuding joy and freedom.",
             "mood": "Joy",
-            "camera": "wide shot"
+            "camera": "wide shot",
+            "voiceover": "The wheels hit the ground with a satisfying rhythm as the skater carves their own path. The setting sun paints everything gold, and the air feels electric with possibility. This is what freedom tastes like."
         },
         {
             "scene_id": 7,
@@ -101,7 +107,8 @@ export const mockData = {
             "environment": "Cozy indoor space",
             "actions": "The artist is fully immersed in their work, expressing happiness through colors.",
             "mood": "Happiness",
-            "camera": "close-up"
+            "camera": "close-up",
+            "voiceover": "Colors spill across the canvas with intention and abandon at once. The artist is somewhere between thought and feeling, where the best work lives. Every stroke is a small declaration: I am here, and I am making something beautiful."
         },
         {
             "scene_id": 8,
@@ -110,7 +117,8 @@ export const mockData = {
             "environment": "Office setting",
             "actions": "Team members collaborate on a project, showing contentment in their teamwork.",
             "mood": "Contentment",
-            "camera": "medium shot"
+            "camera": "medium shot",
+            "voiceover": "Papers and ideas spread across the table, each one a building block of something greater. There's a quiet satisfaction in working alongside people who bring out your best. The heart on the sticky note says what no one needs to say out loud."
         },
         {
             "scene_id": 9,
@@ -119,7 +127,8 @@ export const mockData = {
             "environment": "Nature scenes",
             "actions": "The family shares joyful moments, capturing love and togetherness.",
             "mood": "Love",
-            "camera": "wide shot"
+            "camera": "wide shot",
+            "voiceover": "The park is alive with the sound of a family simply being together. Flowers bloom at the edges of the frame as if nature itself is celebrating. These are the moments that stay — the ordinary ones made extraordinary by the people in them."
         }
     ],
     "images": [

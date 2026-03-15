@@ -22,9 +22,7 @@ export default function ScenesCard({
     regeneratingIds = [], 
     videoState = {}, 
     onGenerateVideo,
-    totalScenes = null,
-    voiceState = {},
-    onGenerateVoiceover
+    totalScenes = null
   }) {
   const getDetailIcon = (label) => {
     const icons = {
@@ -67,8 +65,6 @@ export default function ScenesCard({
           const isRegenerating = regeneratingIds.includes(scene.scene_id);
           const video = videoState[scene.scene_id] || {};
           const isGeneratingVideo = video.status === 'STARTING' || video.status === 'PENDING' || video.status === 'RUNNING';
-          const voice = voiceState[scene.scene_id] || {};
-          const isGeneratingVoice = !!voice.loading;
           return (
           <Grid item xs={12} sm={6} lg={4} key={scene.scene_id}>
             <Card
@@ -217,23 +213,13 @@ export default function ScenesCard({
                     variant="outlined"
                     color="secondary"
                     size="small"
-                    startIcon={isGeneratingVoice ? <CircularProgress size={14} color="inherit" /> : <RecordVoiceOver fontSize="small" />}
-                    onClick={() => onGenerateVoiceover && onGenerateVoiceover(scene)}
-                    disabled={isGeneratingVoice || !scene.voiceover}
-                    sx={{ fontSize: '0.7rem', width: '100%' }}
+                    startIcon={isGeneratingVideo ? <CircularProgress size={14} color="inherit" /> : <RecordVoiceOver fontSize="small" />}
+                    onClick={() => onGenerateVideo && onGenerateVideo(scene, imagePath)}
+                    disabled={isGeneratingVideo || !imagePath}
+                    sx={{ fontSize: '0.7rem', width: '100%', mb: 0.5 }}
                   >
-                    {isGeneratingVoice ? 'Generating Voice...' : voice.audioUrl ? 'Regenerate Voice' : '🎙️ Generate Voice'}
+                    {isGeneratingVideo ? `Generating... (${video.status})` : video.videoUrl ? 'Regenerate Video + Voice' : '🎬 Generate Video + Voice'}
                   </Button>
-                  {voice.error && (
-                    <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
-                      {voice.error}
-                    </Typography>
-                  )}
-                  {voice.audioUrl && (
-                    <Box sx={{ mt: 1 }}>
-                      <audio key={voice.audioUrl} src={voice.audioUrl} controls style={{ width: '100%' }} />
-                    </Box>
-                  )}
                 </Box>
                 <Box sx={{ textAlign: 'center', mt: 1, display: 'flex', gap: 1, justifyContent: 'center' }}>
                   <Button
@@ -260,50 +246,36 @@ export default function ScenesCard({
                     Reset
                   </Button>
                 </Box>
-                <Box sx={{ textAlign: 'center', mt: 1 }}>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    size="small"
-                    startIcon={isGeneratingVideo ? <CircularProgress size={14} color="inherit" /> : <MovieIcon fontSize="small" />}
-                    onClick={() => onGenerateVideo && onGenerateVideo(scene, imagePath)}
-                    disabled={isGeneratingVideo || !imagePath}
-                    sx={{ fontSize: '0.7rem', width: '100%' }}
-                  >
-                    {isGeneratingVideo ? `Generating Video... (${video.status})` : video.videoUrl ? 'Regenerate Video' : 'Generate Video'}
-                  </Button>
-                  {video.status === 'FAILED' && (
-                    <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
-                      {video.error || 'Video generation failed'}
-                    </Typography>
-                  )}
-                  {video.videoUrl && (
-                    <Box sx={{ mt: 1.5, borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
-                      <video
-                        key={video.videoUrl}
-                        src={video.videoUrl}
-                        controls
-                        // autoPlay
-                        loop
-                        style={{ width: '100%', display: 'block', maxHeight: 220 }}
-                      />
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1, py: 0.5, bgcolor: 'background.paper' }}>
-                        <Button
-                          size="small"
-                          startIcon={<DownloadIcon fontSize="small" />}
-                          component="a"
-                          href={video.videoUrl}
-                          download={`scene-${scene.scene_id}-video.mp4`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          sx={{ fontSize: '0.7rem' }}
-                        >
-                          Download
-                        </Button>
-                      </Box>
+                {video.status === 'FAILED' && (
+                  <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
+                    {video.error || 'Video generation failed'}
+                  </Typography>
+                )}
+                {video.videoUrl && (
+                  <Box sx={{ mt: 1.5, borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+                    <video
+                      key={video.videoUrl}
+                      src={video.videoUrl}
+                      controls
+                      loop
+                      style={{ width: '100%', display: 'block', maxHeight: 220 }}
+                    />
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1, py: 0.5, bgcolor: 'background.paper' }}>
+                      <Button
+                        size="small"
+                        startIcon={<DownloadIcon fontSize="small" />}
+                        component="a"
+                        href={video.videoUrl}
+                        download={`scene-${scene.scene_id}-video.mp4`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ fontSize: '0.7rem' }}
+                      >
+                        Download
+                      </Button>
                     </Box>
-                  )}
-                </Box>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           </Grid>

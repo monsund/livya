@@ -35,8 +35,6 @@ export default function Home() {
   // video state: { [scene_id]: { taskId, status, videoUrl, error } }
   const [videoState, setVideoState] = useState(initVideoState);
   const [stitchState, setStitchState] = useState({ loading: false, videoUrl: null, error: null });
-  // voice state: { [scene_id]: { loading, audioUrl, error } }
-  const [voiceState, setVoiceState] = useState({});
 
   const handleStitchVideos = async () => {
     // Collect all scenes that have a completed video, sorted by scene_id
@@ -96,23 +94,6 @@ export default function Home() {
       setTimeout(poll, 5000);
     } catch (err) {
       updateVideoState(sceneId, { status: 'FAILED', error: err.message });
-    }
-  };
-
-  const handleGenerateVoiceover = async (scene) => {
-    const sceneId = scene.scene_id;
-    setVoiceState(prev => ({ ...prev, [sceneId]: { loading: true, audioUrl: null, error: null } }));
-    try {
-      const res = await fetch(`${API_URL}/generate-voiceover`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scene_id: sceneId, text: scene.voiceover }),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setVoiceState(prev => ({ ...prev, [sceneId]: { loading: false, audioUrl: data.audio_url, error: null } }));
-    } catch (err) {
-      setVoiceState(prev => ({ ...prev, [sceneId]: { loading: false, audioUrl: null, error: err.message } }));
     }
   };
 
@@ -186,7 +167,6 @@ export default function Home() {
     setElements({});
     setTotalScenes(null);
     setVideoState({});
-    setVoiceState({});
     setStitchState({ loading: false, videoUrl: null, error: null });
     setLoading(true);
 
@@ -303,9 +283,7 @@ export default function Home() {
               regeneratingIds={regeneratingIds} 
               videoState={videoState} 
               onGenerateVideo={handleGenerateVideo}
-              totalScenes={totalScenes}
-              voiceState={voiceState}
-              onGenerateVoiceover={handleGenerateVoiceover} />
+              totalScenes={totalScenes} />
             {/* Stitch all scene videos into one */}
             <Box sx={{ mt: 3, textAlign: 'center' }}>
               <Button

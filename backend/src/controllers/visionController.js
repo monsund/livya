@@ -1,7 +1,7 @@
 import { extractVisionElements } from "../extractElements.js";
 import { generateScenes } from "../generateScenes.js";
 import { generateImagesForScenes } from "../generateImagesFromScenes.js";
-import { startVideoGeneration, getVideoTaskStatus, uploadVideoToS3, stitchVideosToS3 } from "../services/runwayService.js";
+import { startVideoGeneration, getVideoTaskStatus, uploadVideoToS3, stitchVideosToS3, mergeVideoWithAudio } from "../services/runwayService.js";
 import { imageQueue, imageQueueEvents } from "../queues/imageQueue.js";
 import { openai } from "../openai.js";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
@@ -9,6 +9,9 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 const s3 = new S3Client({ region: process.env.AWS_REGION });
 const S3_BUCKET = process.env.S3_BUCKET_NAME;
 const S3_BASE_URL = process.env.S3_BASE_URL || `https://${S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com`;
+
+// Stores { scene } keyed by Runway taskId so getVideoStatus can mux voiceover on completion
+const taskSceneMap = new Map();
 
 export const processVision = async (req, res) => {
   const t0 = Date.now();
@@ -197,6 +200,11 @@ export const generateVideo = async (req, res) => {
     const promptText = parts.join(', ').slice(0, 512);
     console.log(`[GenerateVideo] Prompt (${promptText.length} chars): ${promptText.slice(0, 120)}${promptText.length > 120 ? '...' : ''}`);
     const taskId = await startVideoGeneration({ imageUrl, promptText, duration: 5 });
+    // Store scene so getVideoStatus can mux voiceover when the task completes
+    if (scene.voiceover) {
+      taskSceneMap.set(taskId, scene);
+      console.log(`[GenerateVideo] Voiceover stored for task ${taskId} (will be muxed on completion)`);
+    }
     console.log(`[GenerateVideo] ✅ Task created: ${taskId} for scene ${scene.scene_id}`);
     res.json({ taskId });
   } catch (error) {
@@ -216,16 +224,36 @@ export const getVideoStatus = async (req, res) => {
     console.log(`[VideoStatus] Polling task ${taskId} (scene ${sceneId || 'unknown'})...`);
     const result = await getVideoTaskStatus(taskId);
     console.log(`[VideoStatus] Task ${taskId} → status: ${result.status}`);
-    // When succeeded, upload the Runway temp video to S3 for permanent storage
+    // When succeeded, mux voiceover into video (if available) then upload to S3
     if (result.status === 'SUCCEEDED' && result.videoUrl) {
-      console.log(`[VideoStatus] Uploading completed video to S3 for scene ${sceneId || taskId}...`);
+      const scene = taskSceneMap.get(taskId);
+      console.log(`[VideoStatus] taskSceneMap lookup for ${taskId}: ${scene ? `scene ${scene.scene_id} WITH voiceover=${!!scene.voiceover}` : 'NOT FOUND (no voiceover mux)'}`);
       try {
-        const s3Url = await uploadVideoToS3(result.videoUrl, sceneId || taskId);
-        console.log(`[VideoStatus] ✅ S3 upload done: ${s3Url}`);
-        result.videoUrl = s3Url;
-      } catch (uploadErr) {
-        console.error('[VideoStatus] ⚠️ S3 upload failed, falling back to Runway URL:', uploadErr.message);
-        // Non-fatal: still return the temporary Runway URL
+        if (scene?.voiceover) {
+          console.log(`[VideoStatus] Generating TTS for scene ${sceneId || taskId} (${scene.voiceover.length} chars)...`);
+          const mp3 = await openai.audio.speech.create({
+            model: 'tts-1',
+            voice: 'alloy',
+            input: scene.voiceover,
+          });
+          const audioBuffer = Buffer.from(await mp3.arrayBuffer());
+          console.log(`[VideoStatus] TTS done (${audioBuffer.length} bytes) — merging with video...`);
+          const s3Url = await mergeVideoWithAudio(result.videoUrl, audioBuffer, sceneId || taskId);
+          console.log(`[VideoStatus] ✅ Merged video+audio uploaded: ${s3Url}`);
+          result.videoUrl = s3Url;
+        } else {
+          console.log(`[VideoStatus] No voiceover — uploading raw video for scene ${sceneId || taskId}...`);
+          const s3Url = await uploadVideoToS3(result.videoUrl, sceneId || taskId);
+          console.log(`[VideoStatus] ✅ S3 upload done: ${s3Url}`);
+          result.videoUrl = s3Url;
+        }
+      } catch (err) {
+        console.error(`[VideoStatus] ❌ Merge/upload failed for scene ${sceneId || taskId}:`, err.message);
+        console.error(err.stack);
+        // Still return the result so the frontend isn’t stuck, but flag it
+        result.mergeError = err.message;
+      } finally {
+        taskSceneMap.delete(taskId);
       }
     }
     res.json(result);
