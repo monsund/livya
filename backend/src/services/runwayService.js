@@ -36,6 +36,19 @@ export async function mergeVideoWithAudio(runwayVideoUrl, audioBuffer, sceneId) 
   fs.writeFileSync(videoFile, Buffer.from(await res.arrayBuffer()));
   fs.writeFileSync(audioFile, audioBuffer);
 
+  // Detect video duration using ffprobe
+  const videoDuration = await new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(videoFile, (err, metadata) => {
+        if (err) return reject(err);
+        resolve(metadata.format.duration);
+    });
+  });
+
+  // round to avoid floating precision issues
+  const safeDuration = Math.ceil(videoDuration * 100) / 100;
+
+  console.log(`[Merge] Detected video duration: ${safeDuration}s`);
+
   console.log(`[Merge] Muxing video + audio for scene ${sceneId}...`);
   await new Promise((resolve, reject) => {
     ffmpeg()
@@ -47,7 +60,8 @@ export async function mergeVideoWithAudio(runwayVideoUrl, audioBuffer, sceneId) 
         '-c:v copy',           // copy video — no re-encode
         '-c:a aac',            // encode mp3 → aac (mp4-compatible)
         '-b:a 128k',
-        '-shortest',           // end when the shorter stream ends
+        '-af apad',
+        `-t ${safeDuration}`,
         '-movflags +faststart',
       ])
       .on('start', cmd => console.log('[Merge] ffmpeg cmd:', cmd))
@@ -151,6 +165,7 @@ export async function stitchVideosToS3(videoEntries) {
           '-r 30',                // force constant FPS
           '-fflags +genpts',
           '-reset_timestamps 1',
+          '-avoid_negative_ts make_zero',
           '-c:v libx264',
           '-preset fast',
           '-crf 23',

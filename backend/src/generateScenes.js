@@ -1,11 +1,24 @@
 import { openai } from "./openai.js";
 import { parseJSON } from "./utils/parseJSON.js";
 
-export async function generateScenes(elements) {
+// duration in seconds → approximate number of 5-second scenes needed
+const durationToSceneCount = (duration) => {
+  if (!duration) return null;
+  return Math.max(3, Math.round(duration / 5));
+};
+
+export async function generateScenes(elements, duration = null) {
   try {
     if (!elements || typeof elements !== 'object') {
       throw new Error("Invalid elements data provided");
     }
+
+    const targetCount = durationToSceneCount(duration);
+    const sceneCountGuidance = targetCount
+      ? `- Generate around ${targetCount} scenes.
+        - Each scene represents roughly 4–7 seconds of video.
+        - The full sequence should roughly match a ${duration}-second video.`
+      : `- Generate as many meaningful, non-redundant scenes as the input allows.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -13,7 +26,12 @@ export async function generateScenes(elements) {
         {
           role: "system",
           content: `
-You generate as many distinct visual life scenes as possible from the provided structured vision elements.
+You generate cinematic life scenes from the provided structured vision elements.
+The scenes should form a meaningful life journey.
+
+The sequence should feel like a progression:
+dream → effort → growth → achievement → fulfillment.
+The final scene should feel emotionally satisfying and represent fulfillment or peace.
 
 Input:
 - theme
@@ -24,13 +42,14 @@ Input:
 - symbols (visible objects, motifs, or notable items)
 
 Output rules:
-- Generate ALL possible unique and visually concrete scenes using only the provided elements.
-- There is NO upper limit to the number of scenes: create a scene for every unique combination or grouping of the provided elements, including all symbols, as long as each scene is meaningful and non-redundant.
+${sceneCountGuidance}
+- Generate unique and visually concrete scenes using only the provided elements.
 - Do NOT invent new life goals or add elements not present in the input.
-- Each scene must be self-contained and visually distinct, suitable for later selection for video creation (e.g., 30s, 60s, 90s videos).
+- Each scene must be self-contained and visually distinct.
 - Mood must come from emotions.
+- Scenes must follow a natural progression rather than random life moments.
 - Environment must align with environment inputs.
-- If symbols are present, ensure they are visually represented in the relevant scenes.
+- If symbols are present, ensure they are visually represented in relevant scenes.
 - Follow the schema strictly.
 
 Return ONLY valid JSON array.
@@ -47,15 +66,14 @@ Scene schema:
   "voiceover": string
 }
 
-voiceover: A 2-3 sentence narrator script spoken aloud during this scene. Written in present tense, evocative and personal, describing what is happening and how it feels.
+voiceover: One short narration sentence (10–14 words) spoken during this scene.
+It should feel inspirational, emotional, and personal.
 
 Camera options (pick one per scene):
 - wide shot
 - medium shot
 - close-up
 - slow pan
-
-Note: The number of scenes may be used to create videos of different lengths (30s, 60s, 90s), so maximize the number of meaningful, non-redundant scenes. Do not default to 5 scenes—generate as many as the input allows.
           `.trim()
         },
         {

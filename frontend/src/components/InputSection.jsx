@@ -7,7 +7,9 @@ import {
   Button,
   Paper,
   Typography,
-  CircularProgress
+  CircularProgress,
+  ToggleButtonGroup,
+  ToggleButton,
 } from '@mui/material';
 import { CloudUpload, Send } from '@mui/icons-material';
 import TabPanel from './TabPanel';
@@ -17,6 +19,7 @@ export default function InputSection({ onSubmit, loading }) {
   const [visionText, setVisionText] = useState('');
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [duration, setDuration] = useState(60);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -39,7 +42,7 @@ export default function InputSection({ onSubmit, loading }) {
     if (visionText.trim()) formData.append('vision', visionText);
     if (image) formData.append('image', image);
     
-    onSubmit(formData, activeTab);
+    onSubmit(formData, activeTab, duration);
   };
 
   return (
@@ -144,6 +147,28 @@ export default function InputSection({ onSubmit, loading }) {
             )}
           </Box>
         </TabPanel>
+
+        <Box sx={{ mt: 3 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            Target video length
+          </Typography>
+          <ToggleButtonGroup
+            value={duration}
+            exclusive
+            onChange={(_, val) => { if (val !== null) setDuration(val); }}
+            size="small"
+            fullWidth
+          >
+            {[30, 60, 90].map(s => (
+              <ToggleButton key={s} value={s} sx={{ fontWeight: 600 }}>
+                {s}s
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+            ~{Math.round(duration / 5)} scenes &nbsp;&bull;&nbsp; final video will be {duration - 2}–{duration + 2}s
+          </Typography>
+        </Box>
 
         <Button
           type="submit"

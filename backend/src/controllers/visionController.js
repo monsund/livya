@@ -13,48 +13,48 @@ const S3_BASE_URL = process.env.S3_BASE_URL || `https://${S3_BUCKET}.s3.${proces
 // Stores { scene } keyed by Runway taskId so getVideoStatus can mux voiceover on completion
 const taskSceneMap = new Map();
 
-export const processVision = async (req, res) => {
-  const t0 = Date.now();
-  console.log('[Vision] POST /vision — blocking mode started');
-  try {
-    const { vision } = req.body;
-    const image = req.file;
+// export const processVision = async (req, res) => {
+//   const t0 = Date.now();
+//   console.log('[Vision] POST /vision — blocking mode started');
+//   try {
+//     const { vision } = req.body;
+//     const image = req.file;
 
-    // Must have either vision text or image
-    if (!vision && !image) {
-      console.warn('[Vision] Rejected: no vision text or image provided');
-      return res.status(400).json({ 
-        error: "Either vision text or image is required" 
-      });
-    }
+//     // Must have either vision text or image
+//     if (!vision && !image) {
+//       console.warn('[Vision] Rejected: no vision text or image provided');
+//       return res.status(400).json({ 
+//         error: "Either vision text or image is required" 
+//       });
+//     }
 
-    console.log(`[Vision] Input: ${vision ? `text (${vision.length} chars)` : 'image upload'} (${image ? `${(image.size / 1024).toFixed(1)} KB` : 'no file'})`);
+//     console.log(`[Vision] Input: ${vision ? `text (${vision.length} chars)` : 'image upload'} (${image ? `${(image.size / 1024).toFixed(1)} KB` : 'no file'})`);
 
-    // Convert image to base64 if provided
-    let imageBase64 = null;
-    if (image) {
-      imageBase64 = image.buffer.toString('base64');
-    }
+//     // Convert image to base64 if provided
+//     let imageBase64 = null;
+//     if (image) {
+//       imageBase64 = image.buffer.toString('base64');
+//     }
 
-    console.log('[Vision] Step 1/3 — Extracting elements...');
-    const elements = await extractVisionElements(vision || "", imageBase64);
-    console.log(`[Vision] Elements extracted: ${Object.keys(elements).join(', ')}`);
+//     console.log('[Vision] Step 1/3 — Extracting elements...');
+//     const elements = await extractVisionElements(vision || "", imageBase64);
+//     console.log(`[Vision] Elements extracted: ${Object.keys(elements).join(', ')}`);
 
-    console.log('[Vision] Step 2/3 — Generating scenes...');
-    const scenes = await generateScenes(elements);
-    console.log(`[Vision] ${scenes.length} scenes generated`);
+//     console.log('[Vision] Step 2/3 — Generating scenes...');
+//     const scenes = await generateScenes(elements);
+//     console.log(`[Vision] ${scenes.length} scenes generated`);
 
-    console.log('[Vision] Step 3/3 — Generating images...');
-    const images = await generateImagesForScenes(scenes);
-    const ok = images.filter(i => !i.error).length;
-    console.log(`[Vision] Images done: ${ok}/${images.length} succeeded | total ${Date.now() - t0}ms`);
+//     console.log('[Vision] Step 3/3 — Generating images...');
+//     const images = await generateImagesForScenes(scenes);
+//     const ok = images.filter(i => !i.error).length;
+//     console.log(`[Vision] Images done: ${ok}/${images.length} succeeded | total ${Date.now() - t0}ms`);
 
-    res.json({ elements, scenes, images });
-  } catch (error) {
-    console.error(`[Vision] Fatal error after ${Date.now() - t0}ms:`, error);
-    res.status(500).json({ error: "Failed to process vision" });
-  }
-};
+//     res.json({ elements, scenes, images });
+//   } catch (error) {
+//     console.error(`[Vision] Fatal error after ${Date.now() - t0}ms:`, error);
+//     res.status(500).json({ error: "Failed to process vision" });
+//   }
+// };
 
 export const processVisionStream = async (req, res) => {
   const t0 = Date.now();
@@ -70,7 +70,7 @@ export const processVisionStream = async (req, res) => {
   };
 
   try {
-    const { vision } = req.body;
+    const { vision, duration } = req.body;
     const image = req.file;
 
     if (!vision && !image) {
@@ -79,7 +79,7 @@ export const processVisionStream = async (req, res) => {
       return res.end();
     }
 
-    console.log(`[Stream] Input: ${vision ? `text (${vision.length} chars)` : 'image upload'} (${image ? `${(image.size / 1024).toFixed(1)} KB` : 'no file'})`);
+    console.log(`[Stream] Input: ${vision ? `text (${vision.length} chars)` : 'image upload'} (${image ? `${(image.size / 1024).toFixed(1)} KB` : 'no file'})${duration ? ` | duration: ${duration}s` : ''}`);
 
     let imageBase64 = null;
     if (image) {
@@ -93,7 +93,7 @@ export const processVisionStream = async (req, res) => {
 
     // Step 2: Generate scenes
     console.log('[Stream] Step 2/3 — Generating scenes...');
-    const scenes = await generateScenes(elements);
+    const scenes = await generateScenes(elements, duration ? Number(duration) : null);
     console.log(`[Stream] ${scenes.length} scenes generated (+${Date.now() - t0}ms) — sending to client now`);
 
     // Send elements + all scenes immediately — UI renders at this point
@@ -162,13 +162,13 @@ export const regenerateScenes = async (req, res) => {
   const t0 = Date.now();
   console.log('[RegenerateScenes] Regenerating all scenes...');
   try {
-    const { elements } = req.body;
+    const { elements, duration } = req.body;
     if (!elements || typeof elements !== 'object') {
       console.warn('[RegenerateScenes] Rejected: invalid elements payload');
       return res.status(400).json({ error: "Valid elements object is required" });
     }
-    console.log(`[RegenerateScenes] Elements theme: "${elements.theme || '(none)'}"`);
-    const scenes = await generateScenes(elements);
+    console.log(`[RegenerateScenes] Elements theme: "${elements.theme || '(none)'}"${duration ? ` | duration: ${duration}s` : ''}`);
+    const scenes = await generateScenes(elements, duration ? Number(duration) : null);
     console.log(`[RegenerateScenes] ${scenes.length} scenes generated (+${Date.now() - t0}ms) — generating images...`);
     const images = await generateImagesForScenes(scenes);
     const ok = images.filter(i => !i.error).length;

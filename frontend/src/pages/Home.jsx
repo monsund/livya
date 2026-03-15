@@ -143,7 +143,7 @@ export default function Home() {
     }
   };
 
-  const handleSubmit = async (formData, activeTab) => {
+  const handleSubmit = async (formData, activeTab, duration) => {
     const vision = formData.get('vision');
     const image = formData.get('image');
 
@@ -171,8 +171,8 @@ export default function Home() {
     setLoading(true);
 
     const options = activeTab === 0
-      ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vision }) }
-      : { method: 'POST', body: formData };
+      ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vision, duration }) }
+      : (() => { formData.append('duration', duration); return { method: 'POST', body: formData }; })();
 
     let response;
     try {
