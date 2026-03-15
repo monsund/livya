@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Container, Typography, Box, Button, CircularProgress } from '@mui/material';
+import { Container, Typography, Box, Button, CircularProgress, Paper, Fade, Chip } from '@mui/material';
 import MovieFilterIcon from '@mui/icons-material/MovieFilter';
+import DownloadIcon from '@mui/icons-material/Download';
 import { mockData } from '../mockData/mockData';
 import InputSection from '../components/InputSection';
 import ElementsCard from '../components/ElementsCard';
@@ -243,90 +244,135 @@ export default function Home() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', background: '#f5f5f5', width: '100%' }}>
-      <Container maxWidth={false} sx={{ py: 4 }}>
-        <Typography variant="h3" align="center" gutterBottom>
-          Livya Vision
-        </Typography>
-        <Typography 
-          variant="h5" 
-          sx={{ 
-            opacity: 0.9,
-            fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' }
-          }}
-        >
-          Transform your vision into visual scenes
-        </Typography>
-        <Box sx={{ mt: 4 }}>
-          <InputSection onSubmit={handleSubmit} loading={loading} />
+    <Box sx={{ minHeight: '100vh', width: '100%' }}>
+      {/* Hero header */}
+      <Box
+        sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: '#fff',
+          pt: { xs: 5, md: 7 },
+          pb: { xs: 8, md: 10 },
+          px: 2,
+          textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <Box sx={{ position: 'relative', zIndex: 1 }}>
+          <Typography
+            variant="h3"
+            sx={{
+              fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+              fontWeight: 800,
+              mb: 1,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Livya Vision
+          </Typography>
+          <Typography
+            variant="h6"
+            sx={{
+              opacity: 0.85,
+              fontWeight: 400,
+              fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1.25rem' },
+              maxWidth: 500,
+              mx: 'auto',
+            }}
+          >
+            Transform your vision into cinematic scenes
+          </Typography>
         </Box>
+        {/* Decorative blur circles */}
+        <Box sx={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.05)', top: -80, right: -60 }} />
+        <Box sx={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.04)', bottom: -40, left: -30 }} />
+      </Box>
+
+      {/* Main content — overlaps hero */}
+      <Container maxWidth="lg" sx={{ mt: { xs: -5, md: -6 }, pb: 6, position: 'relative', zIndex: 1 }}>
+        <InputSection onSubmit={handleSubmit} loading={loading} />
+
         {loading && <LoadingSpinner />}
         {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
+
         {showResults && (
-          <Box sx={{ mt: 4 }}>
-            <ElementsCard
-              elements={{ ...elements, theme }}
-              setTheme={setTheme}
-              setElements={setElements}
-              originalElements={originalElements}
-              originalTheme={originalTheme}
-              onRegenerateScenes={handleRegenerateScenes}
-              regeneratingScenes={regeneratingScenes}
-            />
-            <ScenesCard 
-              scenes={scenes} 
-              setScenes={setScenes} 
-              images={images} 
-              elements={elements} 
-              originalScenes={originalScenes} 
-              onRegenerateImage={handleRegenerateImage} 
-              regeneratingIds={regeneratingIds} 
-              videoState={videoState} 
-              onGenerateVideo={handleGenerateVideo}
-              totalScenes={totalScenes} />
-            {/* Stitch all scene videos into one */}
-            <Box sx={{ mt: 3, textAlign: 'center' }}>
-              <Button
-                variant="contained"
-                color="primary"
-                size="large"
-                startIcon={stitchState.loading ? <CircularProgress size={18} color="inherit" /> : <MovieFilterIcon />}
-                onClick={handleStitchVideos}
-                disabled={stitchState.loading}
-              >
-                {stitchState.loading ? 'Stitching Videos...' : '🎬 Create Vision Board Video'}
-              </Button>
-              {stitchState.error && (
-                <Typography color="error" variant="body2" sx={{ mt: 1 }}>
-                  {stitchState.error}
+          <Fade in timeout={600}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2, md: 3 } }}>
+              <ElementsCard
+                elements={{ ...elements, theme }}
+                setTheme={setTheme}
+                setElements={setElements}
+                originalElements={originalElements}
+                originalTheme={originalTheme}
+                onRegenerateScenes={handleRegenerateScenes}
+                regeneratingScenes={regeneratingScenes}
+              />
+              <ScenesCard
+                scenes={scenes}
+                setScenes={setScenes}
+                images={images}
+                elements={elements}
+                originalScenes={originalScenes}
+                onRegenerateImage={handleRegenerateImage}
+                regeneratingIds={regeneratingIds}
+                videoState={videoState}
+                onGenerateVideo={handleGenerateVideo}
+                totalScenes={totalScenes}
+              />
+
+              {/* Stitch section */}
+              <Paper sx={{ p: { xs: 3, md: 4 }, textAlign: 'center' }}>
+                <Typography variant="h6" gutterBottom>
+                  🎥 Final Vision Board Video
                 </Typography>
-              )}
-              {stitchState.videoUrl && (
-                <Box sx={{ mt: 2, mx: 'auto', maxWidth: 720 }}>
-                  <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                    ✅ Your Vision Board Video
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 480, mx: 'auto' }}>
+                  Generate videos for each scene, then stitch them together into your complete vision board video.
+                </Typography>
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={stitchState.loading ? <CircularProgress size={18} color="inherit" /> : <MovieFilterIcon />}
+                  onClick={handleStitchVideos}
+                  disabled={stitchState.loading}
+                  sx={{ px: 4, py: 1.5 }}
+                >
+                  {stitchState.loading ? 'Stitching...' : 'Create Vision Board Video'}
+                </Button>
+                {stitchState.error && (
+                  <Typography color="error" variant="body2" sx={{ mt: 2 }}>
+                    {stitchState.error}
                   </Typography>
-                  <video
-                    key={stitchState.videoUrl}
-                    src={stitchState.videoUrl}
-                    controls
-                    style={{ width: '100%', borderRadius: 12, boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}
-                  />
-                  <Button
-                    component="a"
-                    href={stitchState.videoUrl}
-                    download="vision-board.mp4"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    variant="outlined"
-                    sx={{ mt: 1 }}
-                  >
-                    Download Vision Board Video
-                  </Button>
-                </Box>
-              )}
+                )}
+                {stitchState.videoUrl && (
+                  <Fade in timeout={500}>
+                    <Box sx={{ mt: 3, mx: 'auto', maxWidth: 720 }}>
+                      <Chip label="✅ Ready" color="success" size="small" sx={{ mb: 1.5, fontWeight: 600 }} />
+                      <Box sx={{ borderRadius: 3, overflow: 'hidden', border: '1px solid', borderColor: 'divider', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
+                        <video
+                          key={stitchState.videoUrl}
+                          src={stitchState.videoUrl}
+                          controls
+                          style={{ width: '100%', display: 'block' }}
+                        />
+                      </Box>
+                      <Button
+                        component="a"
+                        href={stitchState.videoUrl}
+                        download="vision-board.mp4"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        variant="outlined"
+                        startIcon={<DownloadIcon />}
+                        sx={{ mt: 2 }}
+                      >
+                        Download Video
+                      </Button>
+                    </Box>
+                  </Fade>
+                )}
+              </Paper>
             </Box>
-          </Box>
+          </Fade>
         )}
       </Container>
     </Box>
