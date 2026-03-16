@@ -6,6 +6,7 @@ import {
   TextField,
   Button,
   Paper,
+  Grid,
   Typography,
   CircularProgress,
   ToggleButtonGroup,
@@ -15,7 +16,7 @@ import {
   Avatar,
   Tooltip,
 } from '@mui/material';
-import { CloudUpload, Send, TimerOutlined, DeleteOutline, PersonOutline } from '@mui/icons-material';
+import { CloudUpload, Send, TimerOutlined, DeleteOutline, PersonOutline, InfoOutlined } from '@mui/icons-material';
 import TabPanel from './TabPanel';
 
 export default function InputSection({ onSubmit, loading }) {
@@ -111,9 +112,27 @@ export default function InputSection({ onSubmit, loading }) {
   );
 
   return (
-    <Paper sx={{ p: { xs: 2.5, sm: 3.5, md: 4 }, mb: { xs: 2, md: 4 } }}>
-      <Typography variant="h6" gutterBottom sx={{ mb: 2.5 }}>
-        Share Your Vision
+    <Paper
+      sx={{
+        p: { xs: 2.5, sm: 3.5, md: 4 },
+        mb: { xs: 2, md: 4 },
+        borderRadius: 4,
+        backdropFilter: "blur(20px)",
+        background: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+      }}
+    >
+      <Typography
+        variant="h5"
+        gutterBottom
+        sx={{
+          mb: 2.5,
+          fontWeight: 700,
+          letterSpacing: "-0.01em",
+        }}
+      >
+        Describe Your Vision
       </Typography>
 
       <Tabs
@@ -121,11 +140,17 @@ export default function InputSection({ onSubmit, loading }) {
         onChange={handleTabChange}
         sx={{
           mb: 3,
-          '& .MuiTabs-indicator': {
+          minHeight: 42,
+          "& .MuiTabs-indicator": {
             height: 3,
-            borderRadius: '3px 3px 0 0',
-            background: 'linear-gradient(90deg, #667eea, #764ba2)',
+            borderRadius: "3px 3px 0 0",
+            background: "linear-gradient(90deg,#8b5cf6,#ec4899)",
           },
+          "& .MuiTab-root": {
+            textTransform: "none",
+            fontWeight: 600,
+            fontSize: "0.9rem",
+          }
         }}
         variant="scrollable"
         scrollButtons="auto"
@@ -145,6 +170,15 @@ export default function InputSection({ onSubmit, loading }) {
             onChange={(e) => setVisionText(e.target.value)}
             placeholder={"Describe your vision...\n\nExamples:\n• Remote work, financial freedom, calm mornings\n• Building meaningful products, time for family\n• Minimal workspace, confidence, health"}
             variant="outlined"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                background: "rgba(255,255,255,0.05)",
+                borderRadius: 3,
+              },
+              "& textarea": {
+                fontSize: "0.95rem",
+              }
+            }}
           />
         </TabPanel>
 
@@ -167,111 +201,180 @@ export default function InputSection({ onSubmit, loading }) {
           </Stack>
         </TabPanel>
 
-        {/* Duration selector */}
-        <Box sx={{ mt: 3, p: 2.5, bgcolor: 'grey.50', borderRadius: 2.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-            <TimerOutlined sx={{ fontSize: 18, color: 'text.secondary' }} />
-            <Typography variant="subtitle2" color="text.secondary">
-              Video Duration
-            </Typography>
-          </Box>
-          <ToggleButtonGroup
-            value={duration}
-            exclusive
-            onChange={(_, val) => { if (val !== null) setDuration(val); }}
-            size="small"
-            fullWidth
-            sx={{ mb: 1 }}
+        <Box sx={{ mt: 3, display: 'flex', gap: 2, alignItems: 'stretch' }}>
+
+          {/* Duration selector */}
+          <Box
+            sx={{
+              flex: 3,
+              p: 2.5,
+              borderRadius: 3,
+              background: "rgba(255,255,255,0.04)",
+              border: "1.5px solid",
+              borderColor: "divider",
+            }}
           >
-            {[
-              { value: 30, label: '30s', sub: '~6 scenes' },
-              { value: 60, label: '60s', sub: '~12 scenes' },
-              { value: 90, label: '90s', sub: '~18 scenes' },
-            ].map(opt => (
-              <ToggleButton key={opt.value} value={opt.value} sx={{ py: 1, flexDirection: 'column', gap: 0.2 }}>
-                <Typography variant="body2" fontWeight={700}>{opt.label}</Typography>
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.7 }}>{opt.sub}</Typography>
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
-          <Typography variant="caption" color="text.secondary">
-            Final video: {duration - 2}–{duration + 2}s
-          </Typography>
-        </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+              <TimerOutlined sx={{ fontSize: 18, color: 'text.secondary' }} />
+              <Typography variant="subtitle2" color="text.secondary">
+                Video Duration
+              </Typography>
+            </Box>
 
-        {/* Protagonist upload */}
-        <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 2.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-            <PersonOutline sx={{ fontSize: 18, color: 'text.secondary' }} />
-            <Typography variant="subtitle2" color="text.secondary">
-              Protagonist <Typography component="span" variant="caption" color="text.disabled">(optional)</Typography>
+            <ToggleButtonGroup
+              value={duration}
+              exclusive
+              onChange={(_, val) => { if (val !== null) setDuration(val); }}
+              size="small"
+              fullWidth
+              sx={{
+                mb: 1,
+                "& .MuiToggleButton-root": {
+                  borderRadius: "10px !important",
+                  border: "1px solid rgba(0,0,0,0.1)",
+                  textTransform: "none",
+                  py: 1,
+                },
+                "& .Mui-selected": {
+                  background: "linear-gradient(90deg,#6366f1,#8b5cf6)",
+                  color: "#fff",
+                }
+              }}
+            >
+              {[
+                { value: 30, label: '30s', sub: '~6 scenes' },
+                { value: 60, label: '60s', sub: '~12 scenes' },
+                { value: 90, label: '90s', sub: '~18 scenes' },
+              ].map(opt => (
+                <ToggleButton
+                  key={opt.value}
+                  value={opt.value}
+                  sx={{ py: 1, flexDirection: "column", gap: 0.2, fontSize: "0.8rem" }}
+                >
+                  <Typography variant="body2" fontWeight={700}>{opt.label}</Typography>
+                  <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.7 }}>{opt.sub}</Typography>
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+
+            <Typography variant="caption" color="text.secondary">
+              Final video: {duration - 2}–{duration + 2}s
             </Typography>
           </Box>
 
-          {/* Gender selector — always visible */}
-          <Box sx={{ mb: 1.5 }}>
-            <ToggleButtonGroup
-              value={protagonistGender}
-              exclusive
-              onChange={(_, val) => setProtagonistGender(val)}
-              size="small"
-              sx={{ gap: 0.5 }}
-            >
-              <ToggleButton value="male" sx={{ px: 2, py: 0.5, fontSize: '0.8rem', borderRadius: '20px !important', border: '1px solid !important' }}>
-                Male
-              </ToggleButton>
-              <ToggleButton value="female" sx={{ px: 2, py: 0.5, fontSize: '0.8rem', borderRadius: '20px !important', border: '1px solid !important' }}>
-                Female
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
+          {/* Protagonist upload */}
+          <Box
+            sx={{
+              flex: 2,
+              p: 2.5,
+              borderRadius: 3,
+              background: "rgba(255,255,255,0.04)",
+              border: "1.5px solid",
+              borderColor: "divider",
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+              <PersonOutline sx={{ fontSize: 18, color: 'text.secondary' }} />
+              <Typography variant="subtitle2" color="text.secondary">
+                Protagonist
+              </Typography>
+              <Tooltip
+                title="The protagonist is the main character who appears in your video scenes. Upload a photo and select their gender so the AI can generate consistent visuals featuring that person throughout the story."
+                placement="top"
+                arrow
+                componentsProps={{
+                  tooltip: { sx: { maxWidth: 260, fontSize: '0.72rem', lineHeight: 1.55, bgcolor: 'rgba(30,30,40,0.97)', border: '1px solid rgba(255,255,255,0.12)' } },
+                  arrow: { sx: { color: 'rgba(30,30,40,0.97)' } },
+                }}
+              >
+                <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
+                  <InfoOutlined sx={{ fontSize: 16, color: '#a78bfa' }} />
+                </Box>
+              </Tooltip>
+            </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {protagonistPreview ? (
-              <>
-                <Avatar
-                  src={protagonistPreview}
-                  sx={{ width: 64, height: 64, borderRadius: 2, border: '2px solid', borderColor: 'primary.main' }}
-                  variant="rounded"
-                />
-                <Box>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
-                    This person will appear in generated scenes
-                  </Typography>
-                  <Button size="small" color="error" startIcon={<DeleteOutline sx={{ fontSize: 14 }} />}
-                    onClick={() => { setProtagonist(null); setProtagonistPreview(null); setProtagonistGender(null); }}
-                    sx={{ fontSize: '0.75rem', py: 0.25 }}
+            <Stack spacing={1.2}>
+              <ToggleButtonGroup
+                value={protagonistGender}
+                exclusive
+                onChange={(_, val) => setProtagonistGender(val)}
+                size="small"
+                sx={{ gap: 0.5 }}
+              >
+                <ToggleButton
+                  value="male"
+                  sx={{ px: 2, borderRadius: "20px !important", textTransform: "none", fontSize: "0.8rem" }}
+                >
+                  Male
+                </ToggleButton>
+                <ToggleButton
+                  value="female"
+                  sx={{ px: 2, borderRadius: "20px !important", textTransform: "none", fontSize: "0.8rem" }}
+                >
+                  Female
+                </ToggleButton>
+              </ToggleButtonGroup>
+
+              {protagonistPreview ? (
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Avatar
+                    src={protagonistPreview}
+                    sx={{ width: 60, height: 60, borderRadius: 2 }}
+                    variant="rounded"
+                  />
+                  <Button
+                    size="small"
+                    color="error"
+                    startIcon={<DeleteOutline />}
+                    onClick={() => {
+                      setProtagonist(null);
+                      setProtagonistPreview(null);
+                      setProtagonistGender(null);
+                    }}
                   >
                     Remove
                   </Button>
-                </Box>
-              </>
-            ) : (
-              <Button
-                component="label"
-                variant="outlined"
-                size="small"
-                startIcon={<CloudUpload sx={{ fontSize: 16 }} />}
-                sx={{ fontSize: '0.8rem' }}
-              >
-                Upload photo
-                <input type="file" hidden accept="image/jpeg,image/png,image/jpg,image/webp" onChange={handleProtagonistChange} />
-              </Button>
-            )}
+                </Stack>
+              ) : (
+                <Button
+                  component="label"
+                  variant="outlined"
+                  size="small"
+                  startIcon={<CloudUpload />}
+                  sx={{ borderRadius: 2, textTransform: "none", width: "fit-content" }}
+                >
+                  Upload photo
+                  <input type="file" hidden accept="image/*" onChange={handleProtagonistChange} />
+                </Button>
+              )}
+            </Stack>
           </Box>
+
         </Box>
 
-        <Button
-          type="submit"
-          variant="contained"
-          size="large"
-          fullWidth
-          disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Send />}
-          sx={{ mt: 3, py: 1.5, fontSize: '1rem' }}
-        >
-          {loading ? 'Processing...' : 'Generate Vision Scenes'}
-        </Button>
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+          <Button
+            type="submit"
+            variant="contained"
+            size="small"
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={14} color="inherit" /> : <Send sx={{ fontSize: 15 }} />}
+            sx={{
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              borderRadius: 3,
+              py: 0.8,
+              px: 3,
+              background: "linear-gradient(90deg,#6366f1,#8b5cf6,#ec4899)",
+              boxShadow: "0 6px 20px rgba(99,102,241,0.35)",
+              "&:hover": {
+                background: "linear-gradient(90deg,#5b5ff0,#7c3aed,#db2777)"
+              }
+            }}
+          >
+            {loading ? 'Processing...' : 'Generate Vision Scenes'}
+          </Button>
+        </Box>
       </form>
     </Paper>
   );

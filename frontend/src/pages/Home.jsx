@@ -269,10 +269,14 @@ export default function Home() {
       {/* Hero header */}
       <Box
         sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: `
+            radial-gradient(circle at 20% 20%, rgba(120,119,198,0.35), transparent 40%),
+            radial-gradient(circle at 80% 30%, rgba(255,119,198,0.25), transparent 40%),
+            linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f172a 100%)
+          `,
           color: '#fff',
-          pt: { xs: 5, md: 7 },
-          pb: { xs: 8, md: 10 },
+          pt: { xs: 6, md: 8 },
+          pb: { xs: 10, md: 12 },
           px: 2,
           textAlign: 'center',
           position: 'relative',
@@ -281,12 +285,14 @@ export default function Home() {
       >
         <Box sx={{ position: 'relative', zIndex: 1 }}>
           <Typography
-            variant="h3"
+            variant="h2"
             sx={{
-              fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
               fontWeight: 800,
-              mb: 1,
-              letterSpacing: '-0.02em',
+              letterSpacing: "-0.03em",
+              background: "linear-gradient(90deg,#fff,#c7d2fe)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              fontSize: { xs: "2.4rem", sm: "2.8rem", md: "3.2rem" },
             }}
           >
             Livya Vision
@@ -294,11 +300,12 @@ export default function Home() {
           <Typography
             variant="h6"
             sx={{
-              opacity: 0.85,
+              opacity: 0.8,
               fontWeight: 400,
-              fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1.25rem' },
-              maxWidth: 500,
-              mx: 'auto',
+              fontSize: { xs: "1rem", sm: "1.1rem", md: "1.25rem" },
+              maxWidth: 520,
+              mx: "auto",
+              color: "rgba(255,255,255,0.85)",
             }}
           >
             Transform your vision into cinematic scenes
