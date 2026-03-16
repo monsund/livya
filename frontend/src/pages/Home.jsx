@@ -33,6 +33,8 @@ export default function Home() {
   const [totalScenes, setTotalScenes] = useState(mockData?.scenes?.length || null);
   const [regeneratingIds, setRegeneratingIds] = useState([]);
   const [regeneratingScenes, setRegeneratingScenes] = useState(false);
+  const [protagonistBase64, setProtagonistBase64] = useState(null);
+  const [protagonistGender, setProtagonistGender] = useState(null);
   // video state: { [scene_id]: { taskId, status, videoUrl, error } }
   const [videoState, setVideoState] = useState(initVideoState);
   const [stitchState, setStitchState] = useState({ loading: false, videoUrl: null, error: null });
@@ -128,7 +130,7 @@ export default function Home() {
       const response = await fetch(`${API_URL}/regenerate-image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scene }),
+        body: JSON.stringify({ scene, protagonistBase64: protagonistBase64 || null, protagonistGender: protagonistGender || null }),
       });
       const data = await response.json();
       if (data.image_path) {
@@ -147,6 +149,10 @@ export default function Home() {
   const handleSubmit = async (formData, activeTab, duration) => {
     const vision = formData.get('vision');
     const image = formData.get('image');
+    const protagonistFile = formData.get('protagonist');
+    const protagonistGenderVal = formData.get('protagonistGender') || null;
+    formData.delete('protagonist'); // remove the File — we'll send it as base64 instead
+    formData.delete('protagonistGender'); // will be re-appended as plain text after base64 conversion
 
     if (activeTab === 0 && !vision) {
       setError('Please enter your vision text');
@@ -171,9 +177,24 @@ export default function Home() {
     setStitchState({ loading: false, videoUrl: null, error: null });
     setLoading(true);
 
+    // Convert protagonist to base64 if provided
+    let protagonistB64 = null;
+    if (protagonistFile) {
+      protagonistB64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result.split(',')[1]); // strip data:...;base64,
+        reader.readAsDataURL(protagonistFile);
+      });
+      setProtagonistBase64(protagonistB64); // persist for regenerate calls
+    } else {
+      setProtagonistBase64(null);
+    }
+    setProtagonistGender(protagonistGenderVal); // persist for regenerate calls
+    const protagonistBase64 = protagonistB64;
+
     const options = activeTab === 0
-      ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vision, duration }) }
-      : (() => { formData.append('duration', duration); return { method: 'POST', body: formData }; })();
+      ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vision, duration, protagonistBase64, protagonistGender: protagonistGenderVal }) }
+      : (() => { formData.append('duration', duration); if (protagonistBase64) formData.append('protagonistBase64', protagonistBase64); if (protagonistGenderVal) formData.append('protagonistGender', protagonistGenderVal); return { method: 'POST', body: formData }; })();
 
     let response;
     try {

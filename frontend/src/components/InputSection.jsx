@@ -12,8 +12,10 @@ import {
   ToggleButton,
   Fade,
   Stack,
+  Avatar,
+  Tooltip,
 } from '@mui/material';
-import { CloudUpload, Send, TimerOutlined, DeleteOutline } from '@mui/icons-material';
+import { CloudUpload, Send, TimerOutlined, DeleteOutline, PersonOutline } from '@mui/icons-material';
 import TabPanel from './TabPanel';
 
 export default function InputSection({ onSubmit, loading }) {
@@ -22,6 +24,18 @@ export default function InputSection({ onSubmit, loading }) {
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [duration, setDuration] = useState(60);
+  const [protagonist, setProtagonist] = useState(null);
+  const [protagonistPreview, setProtagonistPreview] = useState(null);
+  const [protagonistGender, setProtagonistGender] = useState(null);
+
+  const handleProtagonistChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setProtagonist(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setProtagonistPreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -47,6 +61,8 @@ export default function InputSection({ onSubmit, loading }) {
     const formData = new FormData();
     if (visionText.trim()) formData.append('vision', visionText);
     if (image) formData.append('image', image);
+    if (protagonist) formData.append('protagonist', protagonist);
+    if (protagonistGender) formData.append('protagonistGender', protagonistGender);
     onSubmit(formData, activeTab, duration);
   };
 
@@ -181,6 +197,68 @@ export default function InputSection({ onSubmit, loading }) {
           <Typography variant="caption" color="text.secondary">
             Final video: {duration - 2}–{duration + 2}s
           </Typography>
+        </Box>
+
+        {/* Protagonist upload */}
+        <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 2.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+            <PersonOutline sx={{ fontSize: 18, color: 'text.secondary' }} />
+            <Typography variant="subtitle2" color="text.secondary">
+              Protagonist <Typography component="span" variant="caption" color="text.disabled">(optional)</Typography>
+            </Typography>
+          </Box>
+
+          {/* Gender selector — always visible */}
+          <Box sx={{ mb: 1.5 }}>
+            <ToggleButtonGroup
+              value={protagonistGender}
+              exclusive
+              onChange={(_, val) => setProtagonistGender(val)}
+              size="small"
+              sx={{ gap: 0.5 }}
+            >
+              <ToggleButton value="male" sx={{ px: 2, py: 0.5, fontSize: '0.8rem', borderRadius: '20px !important', border: '1px solid !important' }}>
+                Male
+              </ToggleButton>
+              <ToggleButton value="female" sx={{ px: 2, py: 0.5, fontSize: '0.8rem', borderRadius: '20px !important', border: '1px solid !important' }}>
+                Female
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {protagonistPreview ? (
+              <>
+                <Avatar
+                  src={protagonistPreview}
+                  sx={{ width: 64, height: 64, borderRadius: 2, border: '2px solid', borderColor: 'primary.main' }}
+                  variant="rounded"
+                />
+                <Box>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                    This person will appear in generated scenes
+                  </Typography>
+                  <Button size="small" color="error" startIcon={<DeleteOutline sx={{ fontSize: 14 }} />}
+                    onClick={() => { setProtagonist(null); setProtagonistPreview(null); setProtagonistGender(null); }}
+                    sx={{ fontSize: '0.75rem', py: 0.25 }}
+                  >
+                    Remove
+                  </Button>
+                </Box>
+              </>
+            ) : (
+              <Button
+                component="label"
+                variant="outlined"
+                size="small"
+                startIcon={<CloudUpload sx={{ fontSize: 16 }} />}
+                sx={{ fontSize: '0.8rem' }}
+              >
+                Upload photo
+                <input type="file" hidden accept="image/jpeg,image/png,image/jpg,image/webp" onChange={handleProtagonistChange} />
+              </Button>
+            )}
+          </Box>
         </Box>
 
         <Button

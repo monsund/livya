@@ -30,10 +30,10 @@ export const imageQueueEvents = new QueueEvents('image-generation', { connection
 export const imageWorker = new Worker(
   'image-generation',
   async (job) => {
-    const { scene } = job.data;
+    const { scene, protagonistBase64, protagonistGender } = job.data;
     const t0 = Date.now();
-    console.log(`[ImageQueue] 🔄 Job ${job.id} — generating image for scene ${scene.scene_id} ("${scene.title || scene.visual?.slice(0, 40)}")`);
-    const results = await generateImagesForScenes([scene]);
+    console.log(`[ImageQueue] 🔄 Job ${job.id} — generating image for scene ${scene.scene_id} ("${scene.title || scene.visual?.slice(0, 40)}")${protagonistBase64 ? ' [with protagonist]' : ''}${protagonistGender ? ` [${protagonistGender}]` : ''}`);
+    const results = await generateImagesForScenes([scene], protagonistBase64 || null, protagonistGender || null);
     const r = results[0];
     if (!r || r.error) {
       throw new Error(r?.error || `Image generation failed for scene ${scene.scene_id}`);

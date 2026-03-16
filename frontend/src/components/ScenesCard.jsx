@@ -35,7 +35,7 @@ export default function ScenesCard({
   const allImagesLoaded = imageCount >= sceneCount;
 
   return (
-    <Paper sx={{ p: { xs: 2, sm: 3, md: 3.5 } }}>
+    <Paper sx={{ p: { xs: 2, sm: 3, md: 3.5 }, overflow: 'hidden' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2.5, flexWrap: 'wrap', gap: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -77,7 +77,7 @@ export default function ScenesCard({
       )}
 
       {/* Scene cards grid */}
-      <Grid container spacing={{ xs: 2, md: 2.5 }}>
+      <Grid container spacing={{ xs: 2, md: 2.5 }} sx={{ width: '100%', mx: 0 }}>
         {scenes.map((scene) => {
           let imagePath = null;
           if (images && Array.isArray(images)) {
@@ -93,7 +93,7 @@ export default function ScenesCard({
           const isGeneratingVideo = ['STARTING', 'PENDING', 'RUNNING', 'PROCESSING'].includes(video.status);
 
           return (
-            <Grid item xs={12} sm={6} lg={4} key={scene.scene_id}>
+            <Grid item xs={12} sm={6} key={scene.scene_id}>
               <Fade in timeout={400 + scene.scene_id * 100}>
                 <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <CardContent sx={{ flex: 1, p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: 2.5 } }}>
@@ -117,99 +117,123 @@ export default function ScenesCard({
                       </Typography>
                     </Box>
 
-                    {/* Scene image — preserves full aspect ratio, no cropping */}
-                    {imagePath ? (
-                      <Box sx={{ mb: 2, borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
-                        <img
-                          src={imagePath}
-                          alt={`Scene ${scene.scene_id}`}
-                          style={{
-                            width: '100%',
-                            maxHeight: 220,
-                            objectFit: 'contain',
-                            display: 'block',
-                            backgroundColor: '#f9f9fb',
-                          }}
-                        />
-                      </Box>
-                    ) : (
-                      <Box
-                        sx={{
-                          mb: 2,
-                          height: 180,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          bgcolor: 'grey.50',
-                          borderRadius: 2,
-                          border: '1px dashed',
-                          borderColor: 'grey.300',
-                        }}
-                      >
-                        <Box sx={{ textAlign: 'center' }}>
-                          <CircularProgress size={24} sx={{ mb: 1 }} />
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            Generating image...
-                          </Typography>
-                        </Box>
-                      </Box>
-                    )}
-
-                    {/* Detail fields */}
-                    <Stack spacing={0.75} sx={{ mb: 1.5 }}>
-                      {[
-                        { label: 'Visual', value: scene.visual, field: 'visual' },
-                        { label: 'Environment', value: scene.environment, field: 'environment', select: true, selectKey: 'environment' },
-                        { label: 'Actions', value: scene.actions, field: 'actions' },
-                        { label: 'Mood', value: scene.mood, field: 'mood', select: true, selectKey: 'emotions' },
-                        { label: 'Camera', value: scene.camera },
-                      ].map((detail, idx) => (
-                        <Box key={idx} sx={{ display: 'flex', gap: 0.75, alignItems: 'flex-start' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 88, flexShrink: 0, pt: 0.3 }}>
-                            {detailIcons[detail.label]}
-                            <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ fontSize: '0.72rem' }}>
-                              {detail.label}
-                            </Typography>
+                    {/* Detail fields + Image side by side */}
+                    <Box sx={{ display: 'flex', gap: 2, mb: 1.5, flexDirection: { xs: 'column', sm: 'row' }, alignItems: { sm: 'center' } }}>
+                      {/* Left column — detail fields */}
+                      <Stack spacing={0.75} sx={{ flex: 1, minWidth: 0 }}>
+                        {[
+                          { label: 'Visual', value: scene.visual, field: 'visual' },
+                          { label: 'Environment', value: scene.environment, field: 'environment', select: true, selectKey: 'environment' },
+                          { label: 'Actions', value: scene.actions, field: 'actions' },
+                          { label: 'Mood', value: scene.mood, field: 'mood', select: true, selectKey: 'emotions' },
+                          { label: 'Camera', value: scene.camera },
+                        ].map((detail, idx) => (
+                          <Box key={idx} sx={{ display: 'flex', gap: 0.75, alignItems: 'flex-start' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 88, flexShrink: 0, pt: 0.3 }}>
+                              {detailIcons[detail.label]}
+                              <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ fontSize: '0.72rem' }}>
+                                {detail.label}
+                              </Typography>
+                            </Box>
+                            {detail.field && detail.select ? (
+                              <Select
+                                value={detail.value || ''}
+                                onChange={(e) => {
+                                  if (!setScenes) return;
+                                  setScenes(scenes.map((s) => (s.scene_id === scene.scene_id ? { ...s, [detail.field]: e.target.value } : s)));
+                                }}
+                                variant="standard"
+                                size="small"
+                                sx={{ flex: 1, fontSize: '0.75rem' }}
+                              >
+                                {(elements?.[detail.selectKey] || []).map((opt, i) => (
+                                  <MenuItem key={i} value={opt} sx={{ fontSize: '0.75rem' }}>{opt}</MenuItem>
+                                ))}
+                                {detail.value && !(elements?.[detail.selectKey] || []).includes(detail.value) && (
+                                  <MenuItem value={detail.value} sx={{ fontSize: '0.75rem' }}>{detail.value}</MenuItem>
+                                )}
+                              </Select>
+                            ) : detail.field ? (
+                              <TextField
+                                value={detail.value || ''}
+                                onChange={(e) => {
+                                  if (!setScenes) return;
+                                  setScenes(scenes.map((s) => (s.scene_id === scene.scene_id ? { ...s, [detail.field]: e.target.value } : s)));
+                                }}
+                                variant="standard"
+                                size="small"
+                                multiline
+                                sx={{ flex: 1 }}
+                                inputProps={{ style: { fontSize: '0.75rem', lineHeight: 1.5 } }}
+                              />
+                            ) : (
+                              <Typography variant="caption" color="text.secondary" sx={{ flex: 1, fontSize: '0.75rem', lineHeight: 1.5 }}>
+                                {detail.value}
+                              </Typography>
+                            )}
                           </Box>
-                          {detail.field && detail.select ? (
-                            <Select
-                              value={detail.value || ''}
-                              onChange={(e) => {
-                                if (!setScenes) return;
-                                setScenes(scenes.map((s) => (s.scene_id === scene.scene_id ? { ...s, [detail.field]: e.target.value } : s)));
-                              }}
-                              variant="standard"
-                              size="small"
-                              sx={{ flex: 1, fontSize: '0.75rem' }}
-                            >
-                              {(elements?.[detail.selectKey] || []).map((opt, i) => (
-                                <MenuItem key={i} value={opt} sx={{ fontSize: '0.75rem' }}>{opt}</MenuItem>
-                              ))}
-                              {detail.value && !(elements?.[detail.selectKey] || []).includes(detail.value) && (
-                                <MenuItem value={detail.value} sx={{ fontSize: '0.75rem' }}>{detail.value}</MenuItem>
-                              )}
-                            </Select>
-                          ) : detail.field ? (
-                            <TextField
-                              value={detail.value || ''}
-                              onChange={(e) => {
-                                if (!setScenes) return;
-                                setScenes(scenes.map((s) => (s.scene_id === scene.scene_id ? { ...s, [detail.field]: e.target.value } : s)));
-                              }}
-                              variant="standard"
-                              size="small"
-                              multiline
-                              sx={{ flex: 1 }}
-                              inputProps={{ style: { fontSize: '0.75rem', lineHeight: 1.5 } }}
+                        ))}
+                      </Stack>
+
+                      {/* Right column — image + regenerate */}
+                      <Box sx={{ width: { xs: '100%', sm: 260 }, flexShrink: 0 }}>
+                        <Box
+                          sx={{
+                            height: 220,
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: '#f9f9fb',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {imagePath ? (
+                            <img
+                              src={imagePath}
+                              alt={`Scene ${scene.scene_id}`}
+                              style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                             />
                           ) : (
-                            <Typography variant="caption" color="text.secondary" sx={{ flex: 1, fontSize: '0.75rem', lineHeight: 1.5 }}>
-                              {detail.value}
-                            </Typography>
+                            <Box sx={{ textAlign: 'center' }}>
+                              <CircularProgress size={20} sx={{ mb: 0.5 }} />
+                              <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.65rem' }}>
+                                Generating...
+                              </Typography>
+                            </Box>
                           )}
                         </Box>
-                      ))}
-                    </Stack>
+                        {/* Image actions — Regenerate + Reset */}
+                        <Box sx={{ display: 'flex', gap: 0.5, mt: 0.75, flexWrap: 'wrap' }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={isRegenerating ? <CircularProgress size={12} /> : <AutorenewIcon sx={{ fontSize: 12 }} />}
+                            onClick={() => onRegenerateImage && onRegenerateImage(scene)}
+                            disabled={!isDirty || isRegenerating}
+                            sx={{ fontSize: '0.65rem', py: 0.2, px: 1, flex: 1, minWidth: 0 }}
+                          >
+                            {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+                          </Button>
+                          <Button
+                            variant="text"
+                            size="small"
+                            startIcon={<RestartAltIcon sx={{ fontSize: 12 }} />}
+                            onClick={() => {
+                              if (!original || !setScenes) return;
+                              setScenes(scenes.map((s) => (s.scene_id === scene.scene_id ? { ...original } : s)));
+                            }}
+                            disabled={!isDirty}
+                            color="inherit"
+                            sx={{ minWidth: 'auto', color: 'text.secondary', fontSize: '0.65rem', py: 0.2 }}
+                          >
+                            Reset
+                          </Button>
+                        </Box>
+                      </Box>
+                    </Box>
 
                     {/* Voiceover */}
                     {scene.voiceover && (
@@ -235,9 +259,8 @@ export default function ScenesCard({
                       </Box>
                     )}
 
-                    {/* Action buttons */}
+                    {/* Generate Video + Voice button */}
                     <Stack spacing={1} sx={{ mt: 2 }}>
-                      {/* Generate Video + Voice */}
                       <Button
                         variant="contained"
                         color="secondary"
@@ -253,56 +276,32 @@ export default function ScenesCard({
                             ? 'Regenerate Video + Voice'
                             : '🎬 Generate Video + Voice'}
                       </Button>
-
-                      {/* Regenerate Image + Reset */}
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={isRegenerating ? <CircularProgress size={14} /> : <AutorenewIcon fontSize="small" />}
-                          onClick={() => onRegenerateImage && onRegenerateImage(scene)}
-                          disabled={!isDirty || isRegenerating}
-                          sx={{ flex: 1 }}
-                        >
-                          {isRegenerating ? 'Regenerating...' : 'Regenerate'}
-                        </Button>
-                        <Button
-                          variant="text"
-                          size="small"
-                          startIcon={<RestartAltIcon fontSize="small" />}
-                          onClick={() => {
-                            if (!original || !setScenes) return;
-                            setScenes(scenes.map((s) => (s.scene_id === scene.scene_id ? { ...original } : s)));
-                          }}
-                          disabled={!isDirty}
-                          color="inherit"
-                          sx={{ minWidth: 'auto', color: 'text.secondary' }}
-                        >
-                          Reset
-                        </Button>
-                      </Box>
                     </Stack>
 
-                    {/* Video error */}
-                    {video.status === 'FAILED' && (
-                      <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1, textAlign: 'center' }}>
-                        {video.error || 'Video generation failed'}
-                      </Typography>
-                    )}
-
-                    {/* Video player */}
+                    {/* Video slot + download — only shown when video is ready */}
                     {video.videoUrl && (
-                      <Box sx={{ mt: 2, borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'center', bgcolor: '#000' }}>
+                      <Box sx={{ mt: 1.5 }}>
+                        <Box
+                          sx={{
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: '#000',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
                           <video
                             key={video.videoUrl}
                             src={video.videoUrl}
                             controls
                             loop
-                            style={{ width: '75%', display: 'block', height: 'auto' }}
+                            style={{ maxWidth: '75%', maxHeight: 280, objectFit: 'contain', display: 'block', backgroundColor: '#000' }}
                           />
                         </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1, py: 0.5, bgcolor: 'grey.50' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
                           <Button
                             size="small"
                             startIcon={<DownloadIcon sx={{ fontSize: 14 }} />}
@@ -317,6 +316,13 @@ export default function ScenesCard({
                           </Button>
                         </Box>
                       </Box>
+                    )}
+
+                    {/* Video error */}
+                    {video.status === 'FAILED' && (
+                      <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1, textAlign: 'center' }}>
+                        {video.error || 'Video generation failed'}
+                      </Typography>
                     )}
                   </CardContent>
                 </Card>

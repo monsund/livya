@@ -70,7 +70,7 @@ export const processVisionStream = async (req, res) => {
   };
 
   try {
-    const { vision, duration } = req.body;
+    const { vision, duration, protagonistBase64, protagonistGender } = req.body;
     const image = req.file;
 
     if (!vision && !image) {
@@ -79,7 +79,7 @@ export const processVisionStream = async (req, res) => {
       return res.end();
     }
 
-    console.log(`[Stream] Input: ${vision ? `text (${vision.length} chars)` : 'image upload'} (${image ? `${(image.size / 1024).toFixed(1)} KB` : 'no file'})${duration ? ` | duration: ${duration}s` : ''}`);
+    console.log(`[Stream] Input: ${vision ? `text (${vision.length} chars)` : 'image upload'} (${image ? `${(image.size / 1024).toFixed(1)} KB` : 'no file'})${duration ? ` | duration: ${duration}s` : ''}${protagonistBase64 ? ' | protagonist: yes' : ''}${protagonistGender ? ` | gender: ${protagonistGender}` : ''}`);
 
     let imageBase64 = null;
     if (image) {
@@ -93,7 +93,7 @@ export const processVisionStream = async (req, res) => {
 
     // Step 2: Generate scenes
     console.log('[Stream] Step 2/3 — Generating scenes...');
-    const scenes = await generateScenes(elements, duration ? Number(duration) : null);
+    const scenes = await generateScenes(elements, duration ? Number(duration) : null, protagonistGender || null);
     console.log(`[Stream] ${scenes.length} scenes generated (+${Date.now() - t0}ms) — sending to client now`);
 
     // Send elements + all scenes immediately — UI renders at this point
@@ -103,7 +103,7 @@ export const processVisionStream = async (req, res) => {
     // Step 3: Queue image generation for every scene (concurrency=3 in worker)
     console.log(`[Stream] Step 3/3 — Queuing ${scenes.length} image jobs...`);
     const jobs = await Promise.all(
-      scenes.map(scene => imageQueue.add('generate-image', { scene }))
+      scenes.map(scene => imageQueue.add('generate-image', { scene, protagonistBase64: protagonistBase64 || null, protagonistGender: protagonistGender || null }))
     );
     console.log(`[Stream] ${jobs.length} jobs queued (ids: ${jobs.map(j => j.id).join(', ')})`);
 
@@ -138,13 +138,13 @@ export const processVisionStream = async (req, res) => {
 export const regenerateImage = async (req, res) => {
   const t0 = Date.now();
   try {
-    const { scene } = req.body;
+    const { scene, protagonistBase64, protagonistGender } = req.body;
     if (!scene || !scene.scene_id) {
       console.warn('[RegenerateImage] Rejected: missing or invalid scene object');
       return res.status(400).json({ error: "A valid scene object is required" });
     }
-    console.log(`[RegenerateImage] Regenerating image for scene ${scene.scene_id}...`);
-    const results = await generateImagesForScenes([scene]);
+    console.log(`[RegenerateImage] Regenerating image for scene ${scene.scene_id}${protagonistBase64 ? ' [with protagonist]' : ''}${protagonistGender ? ` [${protagonistGender}]` : ''}...`);
+    const results = await generateImagesForScenes([scene], protagonistBase64 || null, protagonistGender || null);
     const result = results[0];
     if (!result || result.error) {
       console.error(`[RegenerateImage] ❌ Failed for scene ${scene.scene_id}: ${result?.error}`);
@@ -162,15 +162,15 @@ export const regenerateScenes = async (req, res) => {
   const t0 = Date.now();
   console.log('[RegenerateScenes] Regenerating all scenes...');
   try {
-    const { elements, duration } = req.body;
+    const { elements, duration, protagonistGender } = req.body;
     if (!elements || typeof elements !== 'object') {
       console.warn('[RegenerateScenes] Rejected: invalid elements payload');
       return res.status(400).json({ error: "Valid elements object is required" });
     }
-    console.log(`[RegenerateScenes] Elements theme: "${elements.theme || '(none)'}"${duration ? ` | duration: ${duration}s` : ''}`);
-    const scenes = await generateScenes(elements, duration ? Number(duration) : null);
+    console.log(`[RegenerateScenes] Elements theme: "${elements.theme || '(none)'}"${duration ? ` | duration: ${duration}s` : ''}${protagonistGender ? ` | gender: ${protagonistGender}` : ''}`);
+    const scenes = await generateScenes(elements, duration ? Number(duration) : null, protagonistGender || null);
     console.log(`[RegenerateScenes] ${scenes.length} scenes generated (+${Date.now() - t0}ms) — generating images...`);
-    const images = await generateImagesForScenes(scenes);
+    const images = await generateImagesForScenes(scenes, null, protagonistGender || null);
     const ok = images.filter(i => !i.error).length;
     console.log(`[RegenerateScenes] ✅ Done — ${ok}/${images.length} images in ${Date.now() - t0}ms`);
     res.json({ scenes, images });

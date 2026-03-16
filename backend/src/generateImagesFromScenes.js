@@ -9,7 +9,7 @@ const S3_BASE_URL = process.env.S3_BASE_URL || `https://${S3_BUCKET}.s3.${S3_REG
 
 const s3 = new S3Client({ region: S3_REGION });
 
-export async function generateImagesForScenes(scenes) {
+export async function generateImagesForScenes(scenes, protagonistBase64 = null, protagonistGender = null) {
   console.log("generateImagesForScenes called with scenes:", Array.isArray(scenes) ? scenes.length : scenes);
   const results = [];
   const scenesDir = path.join("images", "scenes");
@@ -26,23 +26,43 @@ export async function generateImagesForScenes(scenes) {
   for (const scene of scenes) {
     const { scene_id, visual, environment, actions, mood, camera } = scene;
 
+    const genderWord = protagonistGender === 'male' ? 'man' : protagonistGender === 'female' ? 'woman' : null;
+    const protagonistInstruction = protagonistBase64
+      ? `\nThe scene features the ${genderWord || 'person'} from the provided reference photo as the main subject. Preserve their appearance, face, and identity accurately.`
+      : genderWord
+        ? `\nThe protagonist is a ${genderWord}.`
+        : '';
+
     const prompt = `
 ${visual}.
 Environment: ${environment}.
 Action: ${actions}.
 Mood: ${mood}.
 Camera: ${camera}.
-High quality, realistic, cinematic lighting.
+High quality, realistic, cinematic lighting.${protagonistInstruction}
     `.trim();
 
     console.log(`Generating image for scene ${scene_id}...`);
     let image, image_base64, buffer;
     try {
-      image = await openai.images.generate({
-        model: "gpt-image-1",
-        prompt,
-        size: "1024x1024"
-      });
+      if (protagonistBase64) {
+        // Use image edit with protagonist as reference
+        const imgBuffer = Buffer.from(protagonistBase64, 'base64');
+        const { toFile } = await import('openai');
+        const imageFile = await toFile(imgBuffer, 'protagonist.png', { type: 'image/png' });
+        image = await openai.images.edit({
+          model: "gpt-image-1",
+          image: imageFile,
+          prompt,
+          size: "1024x1024"
+        });
+      } else {
+        image = await openai.images.generate({
+          model: "gpt-image-1",
+          prompt,
+          size: "1024x1024"
+        });
+      }
       if (!image.data || !image.data[0] || !image.data[0].b64_json) {
         throw new Error(`No image data returned for scene ${scene_id}`);
       }

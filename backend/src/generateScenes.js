@@ -7,7 +7,7 @@ const durationToSceneCount = (duration) => {
   return Math.max(3, Math.round(duration / 5));
 };
 
-export async function generateScenes(elements, duration = null) {
+export async function generateScenes(elements, duration = null, protagonistGender = null) {
   try {
     if (!elements || typeof elements !== 'object') {
       throw new Error("Invalid elements data provided");
@@ -28,6 +28,7 @@ export async function generateScenes(elements, duration = null) {
           content: `
 You generate cinematic life scenes from the provided structured vision elements.
 The scenes should form a meaningful life journey.
+${protagonistGender ? `The protagonist is ${protagonistGender}. Use the correct pronouns (${protagonistGender === 'male' ? 'he/him' : 'she/her'}) in voiceovers and refer to the protagonist's gender consistently across all scenes.` : ''}
 
 The sequence should feel like a progression:
 dream → effort → growth → achievement → fulfillment.
