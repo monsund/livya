@@ -31,7 +31,7 @@ const upload = multer({
 });
 
 // router.post("/vision", upload.single('image'), processVision);
-router.post("/vision-stream", upload.single('image'), processVisionStream);
+router.post("/vision-stream", upload.array('images'), processVisionStream);
 router.post("/regenerate-image", regenerateImage);
 router.post("/regenerate-scenes", regenerateScenes);
 router.post("/generate-video", generateVideo);
