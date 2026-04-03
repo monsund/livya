@@ -64,11 +64,24 @@ Scene schema:
   "actions": string,
   "mood": string,
   "camera": string,
-  "voiceover": string
+  "visualPrompt": string,
+  "voiceovers": [
+    {
+      "script": string
+    }
+  ]
 }
 
-voiceover: One short narration sentence (10–14 words) spoken during this scene.
-It should feel inspirational, emotional, and personal.
+Rules:
+- "index" must start from 1 and increment sequentially.
+- "visualPrompt" should combine visual + environment + actions into a clean, detailed image generation prompt.
+- "voiceovers" must contain exactly ONE object initially.
+- Do NOT include any "voiceover" field outside the voiceovers array.
+
+voiceovers[0].script:
+- One short narration sentence (10–14 words)
+- Inspirational, emotional, and personal
+- Should enhance emotion, not just describe visuals
 
 Camera options (pick one per scene):
 - wide shot

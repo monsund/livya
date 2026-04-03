@@ -10,6 +10,7 @@ import {
   IconButton,
   Alert,
   CircularProgress,
+  Snackbar,
 } from "@mui/material";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import CloseIcon from "@mui/icons-material/Close";
@@ -23,6 +24,11 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://livya.onrender.com';
 export default function CreateInputScreen({ onNavigate }) {
   const { visionData, updateVisionData, createVisionText } = useVision();
   const [error, setError] = useState("");
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+
+  const showSnackbar = (message, severity = 'info') => {
+    setSnackbar({ open: true, message, severity });
+  };
 
   // Local state for form inputs
   const [title, setTitle] = useState(visionData.title);
@@ -87,9 +93,12 @@ export default function CreateInputScreen({ onNavigate }) {
           });
         }
 
+        // Add Authorization header with token from localStorage
+        const token = localStorage.getItem('token');
         const response = await fetch(`${API_URL}/vision-stream`, {
           method: 'POST',
           body: formData,
+          headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
         });
 
         if (!response.ok) {
@@ -128,15 +137,15 @@ export default function CreateInputScreen({ onNavigate }) {
                   return { images: newImages };
                 });
               } else if (type === 'image-error') {
-                console.error('[SSE] Image error:', data);
+                showSnackbar(`Image generation failed for a scene`, 'warning');
               } else if (type === 'error') {
-                console.error('[SSE] Stream error:', data);
+                showSnackbar(`Stream error: ${data?.message || 'Unknown error'}`, 'error');
                 throw new Error(data.message);
               } else if (type === 'done') {
-                console.log('[SSE] Stream completed');
+                showSnackbar('Storyboard generated successfully!', 'success');
               }
-            } catch (parseError) {
-              console.warn('[SSE] Failed to parse stream data:', parseError, 'Line:', line);
+            } catch {
+              showSnackbar('Failed to parse a stream update — some data may be missing', 'warning');
             }
           }
         }
@@ -145,7 +154,7 @@ export default function CreateInputScreen({ onNavigate }) {
         updateVisionData({ isLoading: false });
 
       } catch (err) {
-        console.error('Vision generation failed:', err);
+        showSnackbar(err.message || 'Failed to generate scenes. Please try again.', 'error');
         updateVisionData({ 
           isLoading: false, 
           error: err.message || 'Failed to generate scenes. Please try again.' 
@@ -206,51 +215,6 @@ export default function CreateInputScreen({ onNavigate }) {
             Visualize your future in seconds
           </Typography>
         </Box>
-
-        {/* ================= PIL TABS ================= */}
-        {/* <Box
-          sx={{
-            display: "flex",
-            bgcolor: "rgba(247, 231, 231, 0.6)",
-            gap: 1.5,
-            justifyContent: "center",
-            mb: 3,
-          }}
-        >
-          {[
-            { key: "text", label: "Text Prompt" },
-            { key: "image", label: "Image Upload" },
-            { key: "both", label: "Mixed Mode" },
-          ].map((item) => (
-            <Box
-              key={item.key}
-              onClick={() => setTab(item.key)}
-              sx={{
-                textAlign: "center",
-                px: 2.5,
-                py: 1,
-                borderRadius: '10px',
-                cursor: "pointer",
-                fontWeight: 600,
-                background:
-                  tab === item.key
-                    ? "linear-gradient(90deg,#a78bfa,#ec4899)"
-                    : "rgba(255,255,255,0.6)",
-                color: tab === item.key ? "#fff" : "#6b7280",
-                transition: "0.3s",
-                border: tab === item.key ? "none" : "1px solid rgba(0,0,0,0.1)",
-                "&:hover": {
-                  background:
-                    tab === item.key
-                      ? "linear-gradient(90deg,#a78bfa,#ec4899)"
-                      : "rgba(255,255,255,0.8)",
-                },
-              }}
-            >
-              {item.label}
-            </Box>
-          ))}
-        </Box> */}
 
         {/* ================= MAIN CARD ================= */}
         <Paper
@@ -547,6 +511,23 @@ export default function CreateInputScreen({ onNavigate }) {
           </Typography>
         </Paper>
       </Container>
+
+      {/* ================= SNACKBAR ================= */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={snackbar.severity === 'error' ? 6000 : 4000}
+        onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%', borderRadius: 2 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

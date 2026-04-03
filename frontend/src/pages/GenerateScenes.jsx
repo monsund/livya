@@ -1,5 +1,5 @@
-import { Box, Container, Typography, Paper, LinearProgress, Button } from "@mui/material";
-import { useEffect, useRef } from "react";
+import { Box, Container, Typography, Paper, LinearProgress, Button, Snackbar, Alert } from "@mui/material";
+import { useEffect, useRef, useState } from "react";
 import VisionProvider from "../context/VisionContext";
 import { mockData } from "../mockData/mockData";
 
@@ -9,6 +9,11 @@ export default function GeneratingScenes({ onNavigate }) {
   const { visionData, updateVisionData } = useVision();
   const hasAutoNavigated = useRef(false);
   const lastImageCount = useRef(0);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+
+  const showSnackbar = (message, severity = 'info') => {
+    setSnackbar({ open: true, message, severity });
+  };
 
   // Test function to load mockData
   const loadMockData = () => {
@@ -356,10 +361,10 @@ export default function GeneratingScenes({ onNavigate }) {
                           borderRadius: '8px'
                         }}
                         onError={(e) => {
-                          console.error('Failed to load image:', sceneImage);
+                          showSnackbar('Failed to load a scene image', 'error');
                           e.target.style.display = 'none';
                         }}
-                        onLoad={() => console.log('Successfully loaded image:', sceneImage)}
+                        onLoad={() => showSnackbar('Scene image loaded', 'success')}
                       />
                     )}
                     {/* Scene Number Badge */}
@@ -579,9 +584,7 @@ export default function GeneratingScenes({ onNavigate }) {
                   size="small" 
                   variant="outlined" 
                   onClick={() => {
-                    console.log('[Debug] Current visionData state:', visionData);
-                    console.log('[Debug] Scenes:', visionData.scenes);
-                    console.log('[Debug] Images:', visionData.images);
+                    showSnackbar(`Scenes: ${visionData.scenes?.length ?? 0} | Images: ${visionData.images?.length ?? 0} | Loading: ${visionData.isLoading ? 'Yes' : 'No'}`, 'info');
                   }}
                   sx={{ fontSize: 10, py: 0.5 }}
                 >
@@ -712,6 +715,22 @@ export default function GeneratingScenes({ onNavigate }) {
           )}
         </Box>
       </Container>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={snackbar.severity === 'error' ? 5000 : 3000}
+        onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%', borderRadius: 2 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

@@ -1,5 +1,6 @@
 import { Box, Container, Typography, Paper, Button } from "@mui/material";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import api from "../api/axios";
 import SceneCard from "../components/SceneCard";
 import VisionProvider from "../context/VisionContext";
 
@@ -17,6 +18,53 @@ export default function Storyboard() {
   const images = visionData.images || [];
   const videos = visionData.videos || [];
   const [activeSceneId, setActiveSceneId] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+
+
+  // Fetch all projects on mount
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const projectsRes = await api.get("/projects");
+        setProjects(projectsRes.data);
+        // Auto-select the latest project if none selected
+        if (projectsRes.data.length > 0 && !selectedProjectId) {
+          setSelectedProjectId(projectsRes.data[0]._id);
+        }
+      } catch (err) {
+        console.error("Failed to fetch projects", err);
+      }
+    };
+    fetchProjects();
+    // eslint-disable-next-line
+  }, []);
+
+  // Fetch scenes, images, and videos for a project
+  const fetchScenesAndImages = async (projectId) => {
+    const pid = projectId || selectedProjectId;
+    if (!pid) return;
+    try {
+      const [scenesRes, imagesRes, videosRes] = await Promise.all([
+        api.get(`/projects/${pid}/scenes`),
+        api.get(`/projects/${pid}/images`),
+        api.get(`/projects/${pid}/scene-videos`)
+      ]);
+      updateVisionData({
+        scenes: scenesRes.data,
+        images: imagesRes.data,
+        videos: videosRes.data,
+      });
+    } catch (err) {
+      console.error("Failed to fetch scenes/images/videos", err);
+    }
+  };
+
+  // Fetch scenes and images when selectedProjectId changes
+  useEffect(() => {
+    fetchScenesAndImages(selectedProjectId);
+    // eslint-disable-next-line
+  }, [selectedProjectId]);
   
   // Helper to update video state for a specific scene
   const updateVideoState = (sceneId, patch) => {
@@ -26,22 +74,20 @@ export default function Storyboard() {
     }));
   };
 
-  // Handle scene changes (editing)
+  // Handle scene changes (editing) — only updates local state
   const handleSceneChange = (updatedScene) => {
-    const updatedScenes = scenes.map(scene => 
+    const updatedScenes = scenes.map(scene =>
       scene.scene_id === updatedScene.scene_id ? updatedScene : scene
     );
     updateVisionData({ scenes: updatedScenes });
   };
 
   // Poll video status until completion
-  const pollVideoStatus = async (taskId, sceneId) => {
+  const pollVideoStatus = async (taskId, sceneId, videoId) => {
     try {
-      const response = await fetch(`${API_URL}/video-status/${taskId}?sceneId=${sceneId}`);
-      if (!response.ok) throw new Error('Failed to get video status');
-      
-      const { status, videoUrl, error: taskError } = await response.json();
-      
+      const url = `/video-status/${taskId}?sceneId=${sceneId}${videoId ? `&videoId=${videoId}` : ''}`;
+      const response = await api.get(url);
+      const { status, videoUrl, error: taskError } = response.data;
       updateVideoState(sceneId, { 
         status, 
         videoUrl: videoUrl || null, 
@@ -49,20 +95,20 @@ export default function Storyboard() {
       });
 
       // Continue polling if still processing
-      if (['PENDING', 'RUNNING', 'PROCESSING'].includes(status)) {
-        setTimeout(() => pollVideoStatus(taskId, sceneId), 3000);
-      } else if (status === 'SUCCEEDED' && videoUrl) {
+      if (["PENDING", "RUNNING", "PROCESSING"].includes(status)) {
+        setTimeout(() => pollVideoStatus(taskId, sceneId, videoId), 3000);
+      } else if (status === "SUCCEEDED" && videoUrl) {
         // Update the videos in context when completed
         const updatedVideos = visionData.videos 
-          ? [...visionData.videos.filter(v => v.scene_id !== sceneId), { scene_id: sceneId, videoUrl }]
-          : [{ scene_id: sceneId, videoUrl }];
+          ? [...visionData.videos.filter(v => v.sceneId !== sceneId && v._id !== videoId), { sceneId, url: videoUrl }]
+          : [{ sceneId, url: videoUrl }];
         updateVisionData({ videos: updatedVideos });
         setLoadingStates(prev => ({ ...prev, [`video_${sceneId}`]: false }));
-      } else if (status === 'FAILED') {
+      } else if (status === "FAILED") {
         setLoadingStates(prev => ({ ...prev, [`video_${sceneId}`]: false }));
       }
     } catch (error) {
-      console.error('Error polling video status:', error);
+      console.error("Error polling video status:", error);
       updateVideoState(sceneId, { error: error.message });
       setLoadingStates(prev => ({ ...prev, [`video_${sceneId}`]: false }));
     }
@@ -72,40 +118,47 @@ export default function Storyboard() {
   const handleRegenerateImage = async (scene) => {
     const sceneId = scene.scene_id;
     setLoadingStates(prev => ({ ...prev, [`regen_${sceneId}`]: true }));
-    
     try {
-      const response = await fetch(`${API_URL}/regenerate-image`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          scene: scene, // Send the full scene object as expected by backend
-          protagonistBase64: null, // Send empty as requested
-          protagonistGender: null // Send empty as requested
-        }),
+      // Persist any local scene edits before regenerating
+      await api.put(`/projects/${selectedProjectId}/scenes/${sceneId}`, {
+        title: scene.title,
+        visual: scene.visual,
+        environment: scene.environment,
+        actions: scene.actions,
+        mood: scene.mood,
+        camera: scene.camera,
+        voiceover: scene.voiceover,
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to regenerate image');
-      }
-
-      const data = await response.json();
-      
-      // Update the image in context
-      const updatedImages = visionData.images?.map(img => 
-        img.scene_id === sceneId 
-          ? { ...img, image_path: data.image_path }
-          : img
-      ) || [];
-
-      updateVisionData({ images: updatedImages });
-      
+      await api.post("/regenerate-image", { scene });
+      // Refresh scenes and images after regeneration
+      await fetchScenesAndImages();
+      setLoadingStates(prev => ({ ...prev, [`regen_${sceneId}`]: false }));
     } catch (error) {
       console.error('Error regenerating image:', error);
-      alert('Error regenerating image. Please try again.');
-    } finally {
       setLoadingStates(prev => ({ ...prev, [`regen_${sceneId}`]: false }));
+      alert('Error regenerating image. Please try again.');
+    }
+  };
+
+  // Save scene edits without regenerating
+  const handleSaveScene = async (scene) => {
+    const sceneId = scene.scene_id;
+    setLoadingStates(prev => ({ ...prev, [`save_${sceneId}`]: true }));
+    try {
+      await api.put(`/projects/${selectedProjectId}/scenes/${sceneId}`, {
+        title: scene.title,
+        visual: scene.visual,
+        environment: scene.environment,
+        actions: scene.actions,
+        mood: scene.mood,
+        camera: scene.camera,
+        voiceover: scene.voiceover,
+      });
+    } catch (error) {
+      console.error('Error saving scene:', error);
+      alert('Failed to save scene. Please try again.');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [`save_${sceneId}`]: false }));
     }
   };
 
@@ -114,41 +167,27 @@ export default function Storyboard() {
     const sceneId = scene.scene_id;
     setLoadingStates(prev => ({ ...prev, [`video_${sceneId}`]: true }));
     updateVideoState(sceneId, { status: 'STARTING', videoUrl: null, error: null });
-    
     try {
-      const response = await fetch(`${API_URL}/generate-video`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          imageUrl: imagePath,
-          scene: scene
-        }),
+      const response = await api.post("/generate-video", {
+        imageUrl: imagePath,
+        scene: scene
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate video');
-      }
-
-      const data = await response.json();
-      
+      const data = response.data;
       // Check if we got a taskId (async) or immediate result
       if (data.taskId) {
-        // Start polling for video completion
+        // Start polling for video completion, pass videoId to update DB
         updateVideoState(sceneId, { taskId: data.taskId, status: 'PENDING' });
-        pollVideoStatus(data.taskId, sceneId);
+        pollVideoStatus(data.taskId, sceneId, data.videoId);
       } else {
         // Handle immediate result (fallback)
         setLoadingStates(prev => ({ ...prev, [`video_${sceneId}`]: false }));
         if (data.videoUrl) {
           const updatedVideos = visionData.videos 
-            ? [...visionData.videos.filter(v => v.scene_id !== sceneId), { scene_id: sceneId, videoUrl: data.video_url }]
-            : [{ scene_id: sceneId, videoUrl: data.videoUrl }];
+            ? [...visionData.videos.filter(v => v.sceneId !== sceneId), { sceneId, url: data.videoUrl }]
+            : [{ sceneId, url: data.videoUrl }];
           updateVisionData({ videos: updatedVideos });
         }
       }
-      
     } catch (error) {
       console.error('Error generating video:', error);
       updateVideoState(sceneId, { error: error.message });
@@ -157,32 +196,51 @@ export default function Storyboard() {
     }
   };
 
+  // Allow user to select a previous scene video as active
+  const handleSelectVideo = async (scene, videoId) => {
+    try {
+      await api.put(`/projects/${selectedProjectId}/scenes/${scene.scene_id}/select-video`, { videoId });
+      // Optimistically update local videos state
+      const updatedVideos = videos.map(v => {
+        if (String(v.sceneId) !== String(scene.scene_id)) return v;
+        return { ...v, isLatest: String(v._id) === String(videoId) };
+      });
+      updateVisionData({ videos: updatedVideos });
+    } catch (err) {
+      console.error('Failed to select video:', err);
+    }
+  };
+
+  // Allow user to select a previously generated image as default
+  const handleSelectImage = async (scene, imageId) => {
+    try {
+      await api.put(`/projects/${selectedProjectId}/scenes/${scene.scene_id}/select-image`, { imageId });
+      // Optimistically update local images state
+      const updatedImages = images.map(img => {
+        if (String(img.scene_id) !== String(scene.scene_id)) return img;
+        const updatedList = img.images.map(i => ({ ...i, isDefault: String(i._id) === String(imageId) }));
+        const newDefault = updatedList.find(i => i.isDefault);
+        return { ...img, images: updatedList, image_path: newDefault?.url || img.image_path };
+      });
+      updateVisionData({ images: updatedImages });
+    } catch (err) {
+      console.error('Failed to select image:', err);
+    }
+  };
+
   // API call to create final stitched video
   const handleCreateFinalVideo = async () => {
     setCreatingFinalVideo(true);
-    
     try {
-      const response = await fetch(`${API_URL}/stitch-videos`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          scenes: scenes,
-          videos: visionData.videos || [],
-          duration: visionData.duration || 30,
-          title: visionData.title || 'My Vision Video',
-          theme: visionData.elements?.theme
-        }),
+      const response = await api.post("/stitch-videos", {
+        projectId: selectedProjectId,
+        scenes,
+        videos: visionData.videos || [],
+        duration: visionData.duration || 30,
+        title: visionData.title || 'My Vision Video',
+        theme: visionData.elements?.theme,
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to create final video');
-      }
-
-      const data = await response.json();
-      
-      // Update context with final video URL
+      const data = response.data;
       updateVisionData({ 
         finalVideo: {
           url: data.stitchedUrl,
@@ -190,9 +248,7 @@ export default function Storyboard() {
           created_at: new Date().toISOString()
         }
       });
-
       alert('Final video created successfully!');
-      
     } catch (error) {
       console.error('Error creating final video:', error);
       alert('Error creating final video. Please try again.');
@@ -223,6 +279,36 @@ export default function Storyboard() {
           <Typography variant="body2" sx={{ opacity: 0.7, mt: 1 }}>
             Edit and refine your scenes before generating videos
           </Typography>
+
+          {/* Project selection dropdown */}
+          {projects.length > 1 && (
+            <Box mt={2} display="flex" justifyContent="center">
+              <Box sx={{ width: '100%', maxWidth: 600 }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Select a Project:
+                </Typography>
+                <select
+                  value={selectedProjectId || ''}
+                  onChange={e => setSelectedProjectId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: 12,
+                    fontSize: 16,
+                    border: '1.5px solid #e5e7eb',
+                    background: '#fafaff',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {projects.map(project => (
+                    <option key={project._id} value={project._id}>
+                      {project.title || 'Untitled'} ({new Date(project.createdAt).toLocaleString()})
+                    </option>
+                  ))}
+                </select>
+              </Box>
+            </Box>
+          )}
         </Box>
 
         {/* ================= SCENES ================= */}
@@ -232,9 +318,12 @@ export default function Storyboard() {
               const image = images.find(
                 (img) => img.scene_id === scene.scene_id
               );
-              const video = videos.find(
-                (vid) => vid.scene_id === scene.scene_id
-              );
+              // All video versions for this scene, newest first
+              const sceneVideos = videos
+                .filter((vid) => String(vid.sceneId) === String(scene.scene_id))
+                .sort((a, b) => (b.version || 0) - (a.version || 0));
+              // Active video = isLatest flag, fall back to first
+              const video = sceneVideos.find(v => v.isLatest) || sceneVideos[0] || null;
               const videoState = videoStates[scene.scene_id] || {};
               const isGeneratingVideo = ['STARTING', 'PENDING', 'RUNNING', 'PROCESSING'].includes(videoState.status) || loadingStates[`video_${scene.scene_id}`];
 
@@ -245,6 +334,7 @@ export default function Storyboard() {
                   scene={scene}
                   image={image}
                   video={video}
+                  allVideos={sceneVideos}
                   videoState={videoState}
                   isExpanded={activeSceneId === scene.scene_id}
                   onToggle={() =>
@@ -257,6 +347,10 @@ export default function Storyboard() {
                     handleGenerateVideo(scene, image?.image_path)
                   }
                   onSceneChange={handleSceneChange}
+                  onSave={() => handleSaveScene(scene)}
+                  isSaving={loadingStates[`save_${scene.scene_id}`]}
+                  onSelectImage={(imageId) => handleSelectImage(scene, imageId)}
+                  onSelectVideo={(videoId) => handleSelectVideo(scene, videoId)}
                   isRegenerating={loadingStates[`regen_${scene.scene_id}`]}
                   isGeneratingVideo={isGeneratingVideo}
                 />

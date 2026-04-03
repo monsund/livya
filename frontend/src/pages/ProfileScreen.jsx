@@ -18,7 +18,7 @@ import PhotoCamera from "@mui/icons-material/PhotoCamera";
 import { useState, useRef, useEffect } from "react";
 import VisionProvider from "../context/VisionContext";
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ onLogout }) {
   const { visionData, updateVisionData } = VisionProvider.useVision();
   const [name, setName] = useState("Monsoon");
   const [editingName, setEditingName] = useState(false);
@@ -251,6 +251,7 @@ export default function ProfileScreen() {
             fullWidth
             startIcon={<LogoutIcon />}
             sx={{ justifyContent: "flex-start", color: "#ef4444" }}
+            onClick={onLogout}
           >
             Logout
           </Button>

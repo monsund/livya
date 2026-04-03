@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import VisionProvider from '../context/VisionContext';
-import { Container, Typography, Box, Button, CircularProgress, Paper, Fade, Chip } from '@mui/material';
-
-import LoadingSpinner from '../components/LoadingSpinner';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://livya.onrender.com';
+import { Container, Typography, Box, Button, Paper, Chip } from '@mui/material';
 
 const useVision = VisionProvider.useVision;
 
