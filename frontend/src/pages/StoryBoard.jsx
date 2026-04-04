@@ -5,8 +5,6 @@ import SceneCard from "../components/SceneCard";
 import VisionProvider from "../context/VisionContext";
 
 const useVision = VisionProvider.useVision;
-const API_URL = import.meta.env.VITE_API_URL || 'https://livya.onrender.com';
-
 
 export default function Storyboard() {
   const { visionData, updateVisionData } = useVision();
